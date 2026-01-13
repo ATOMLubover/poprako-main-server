@@ -1,10 +1,17 @@
 package model
 
 type UserInfo struct {
-	UserID    string `json:"user_id"`
-	QQ        string `json:"qq"`
-	Nickname  string `json:"nickname"`
-	CreatedAt int64  `json:"created_at"`
+	UserID                string `json:"user_id"`
+	QQ                    string `json:"qq"`
+	Nickname              string `json:"nickname"`
+	AssignedTranslatorAt  int64  `json:"assigned_translator_at"`
+	AssignedProofreaderAt int64  `json:"assigned_proofreader_at"`
+	AssignedTypesetterAt  int64  `json:"assigned_typesetter_at"`
+	AssignedRedrawerAt    int64  `json:"assigned_redrawer_at"`
+	AssignedReviewerAt    int64  `json:"assigned_reviewer_at"`
+	AssignedUploaderAt    int64  `json:"assigned_uploader_at"`
+	IsAdmin               bool   `json:"is_admin"`
+	CreatedAt             int64  `json:"created_at"`
 }
 
 type LoginArgs struct {
@@ -14,7 +21,7 @@ type LoginArgs struct {
 	InvCode  string `json:"inv_code,omitempty"`
 }
 
-type LoginToken struct {
+type LoginReply struct {
 	Token string `json:"token"`
 }
 
@@ -29,4 +36,12 @@ type UpdateUserArgs struct {
 	AssignRedrawer    *bool   `json:"assign_redrawer,omitempty"`
 	AssignReviewer    *bool   `json:"assign_reviewer,omitempty"`
 	AssignUploader    *bool   `json:"assign_uploader,omitempty"`
+}
+
+type InviteUserArgs struct {
+	InviteeID string `json:"invitee_id"`
+}
+
+type InviteUserReply struct {
+	InvCode string `json:"invitation_code"`
 }

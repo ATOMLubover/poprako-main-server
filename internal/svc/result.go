@@ -48,6 +48,8 @@ const (
 	USER_ID_MISMATCH SvcErr = "User ID mismatch"
 	// Failed to generate UUID.
 	ID_GEN_FAILURE SvcErr = "Failed to generate ID"
+	// Permission denied.
+	PERMISSION_DENIED SvcErr = "Permission denied"
 )
 
 // Get a API error code for the ServError.
@@ -63,6 +65,16 @@ func (e *SvcErr) Code() uint16 {
 		return 404
 	case PWD_MISMATCH:
 		return 401
+	case INV_CODE_INVALID:
+		return 400
+	case INV_CODE_MISMATCH:
+		return 400
+	case USER_ID_MISMATCH:
+		return 400
+	case ID_GEN_FAILURE:
+		return 500
+	case PERMISSION_DENIED:
+		return 403
 	default:
 		return 500
 	}
@@ -83,6 +95,16 @@ func (e *SvcErr) Msg() string {
 		return "用户不存在"
 	case PWD_MISMATCH:
 		return "密码错误"
+	case INV_CODE_INVALID:
+		return "邀请码无效"
+	case INV_CODE_MISMATCH:
+		return "邀请码不匹配"
+	case USER_ID_MISMATCH:
+		return "用户ID不匹配"
+	case ID_GEN_FAILURE:
+		return "服务器内部错误"
+	case PERMISSION_DENIED:
+		return "权限不足"
 	default:
 		return "服务器内部错误"
 	}

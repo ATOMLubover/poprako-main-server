@@ -21,7 +21,7 @@ type UserSvc interface {
 	GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr)
 	GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr)
 
-	LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], SvcErr)
+	LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr)
 
 	UpdateUserInfo(args model.UpdateUserArgs) SvcErr
 }
@@ -49,16 +49,35 @@ func NewUserSvc(r repo.UserRepo, jwt *jwtcodec.Codec) UserSvc {
 
 // Get user info by user ID.
 func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr) {
-	userBasics, err := us.repo.GetUserByID(nil, userID)
+	userBasic, err := us.repo.GetUserByID(nil, userID)
 	if err != nil {
 		zap.L().Error("Failed to get user basics by ID", zap.String("userID", userID), zap.Error(err))
 		return SvcRslt[model.UserInfo]{}, DB_FAILURE
 	}
 
 	userInfo := model.UserInfo{
-		UserID:    userBasics.ID,
-		Nickname:  userBasics.Nickname,
-		CreatedAt: userBasics.CreatedAt,
+		UserID:    userBasic.ID,
+		IsAdmin:   userBasic.IsAdmin,
+		Nickname:  userBasic.Nickname,
+		CreatedAt: userBasic.CreatedAt,
+	}
+	if userBasic.AssignedTranslatorAt != nil {
+		userInfo.AssignedTranslatorAt = *userBasic.AssignedTranslatorAt
+	}
+	if userBasic.AssignedProofreaderAt != nil {
+		userInfo.AssignedProofreaderAt = *userBasic.AssignedProofreaderAt
+	}
+	if userBasic.AssignedTypesetterAt != nil {
+		userInfo.AssignedTypesetterAt = *userBasic.AssignedTypesetterAt
+	}
+	if userBasic.AssignedRedrawerAt != nil {
+		userInfo.AssignedRedrawerAt = *userBasic.AssignedRedrawerAt
+	}
+	if userBasic.AssignedReviewerAt != nil {
+		userInfo.AssignedReviewerAt = *userBasic.AssignedReviewerAt
+	}
+	if userBasic.AssignedUploaderAt != nil {
+		userInfo.AssignedUploaderAt = *userBasic.AssignedUploaderAt
 	}
 
 	return accept(200, userInfo), NO_ERROR
@@ -82,7 +101,7 @@ func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) 
 }
 
 // Get or create user during login.
-func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], SvcErr) {
+func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr) {
 	if args.InvCode != "" {
 		// If invitation code is provided, validate it.
 		// This happens when a new user is trying to register.
@@ -90,12 +109,12 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 		invCode, err := us.verifyInvCode(args.InvCode)
 		if err != nil {
 			zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, INV_CODE_INVALID
+			return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
 		}
 
 		if invCode != args.QQ {
 			zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
-			return SvcRslt[model.LoginToken]{}, INV_CODE_MISMATCH
+			return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
 		}
 
 		// Verification passed.
@@ -103,13 +122,13 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 		newPwdHash, err := us.hashPwd(args.Password)
 		if err != nil {
 			zap.L().Error("Failed to hash password during user login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, PWD_HASH_FAILURE
+			return SvcRslt[model.LoginReply]{}, PWD_HASH_FAILURE
 		}
 
 		newID, err := genUUID()
 		if err != nil {
 			zap.L().Error("Failed to generate UUID during user login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, ID_GEN_FAILURE
+			return SvcRslt[model.LoginReply]{}, ID_GEN_FAILURE
 		}
 
 		newUser := &po.NewUser{
@@ -123,7 +142,7 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 		// This is expected and acceptable in concurrent login scenarios.
 		if err := us.repo.CreateUser(nil, newUser); err != nil {
 			zap.L().Error("Failed to create new user during login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, DB_FAILURE
+			return SvcRslt[model.LoginReply]{}, DB_FAILURE
 		}
 
 		// Creation succeeded, generate JWT token for the new user.
@@ -131,10 +150,10 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 		token, err := us.genJWT(newUser.ID)
 		if err != nil {
 			zap.L().Error("Failed to generate JWT for new user during login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, DB_FAILURE
+			return SvcRslt[model.LoginReply]{}, DB_FAILURE
 		}
 
-		return accept(204, model.LoginToken{Token: token}), NO_ERROR
+		return accept(204, model.LoginReply{Token: token}), NO_ERROR
 	}
 
 	// No invitation code provided, treat as existing user login.
@@ -142,22 +161,22 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
 	if err != nil {
 		zap.L().Error("Failed to get password hash during user login", zap.String("email", args.QQ), zap.Error(err))
-		return SvcRslt[model.LoginToken]{}, DB_FAILURE
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
 
 	// If the user exists, verify the password.
 	if !us.verifyPwd(secret.PwdHash, args.Password) {
-		return SvcRslt[model.LoginToken]{}, PWD_MISMATCH
+		return SvcRslt[model.LoginReply]{}, PWD_MISMATCH
 	}
 
 	// Verification succeeded, generate JWT token for the existing user.
 	token, err := us.genJWT(secret.ID)
 	if err != nil {
 		zap.L().Error("Failed to generate JWT for existing user during login", zap.String("qq", args.QQ), zap.Error(err))
-		return SvcRslt[model.LoginToken]{}, DB_FAILURE
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
 
-	return accept(200, model.LoginToken{Token: token}), NO_ERROR
+	return accept(200, model.LoginReply{Token: token}), NO_ERROR
 }
 
 // Update user info by user ID.
@@ -228,6 +247,31 @@ func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 	return NO_ERROR
 }
 
+func (us *userSvc) InviteUser(operUserID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr) {
+	userBasic, err := us.repo.GetUserByID(nil, operUserID)
+	if err != nil {
+		zap.L().Error("Failed to get user basics by ID during invitation", zap.String("userID", operUserID), zap.Error(err))
+		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
+	}
+
+	// Check whether operator is admin.
+	if !userBasic.IsAdmin {
+		zap.L().Warn("Non-admin user attempted to invite user", zap.String("userID", operUserID))
+		return SvcRslt[model.InviteUserReply]{}, PERMISSION_DENIED
+	}
+
+	// Generate invitation code.
+	invCode := us.genInvCode(args.InviteeID)
+	if invCode == "" {
+		zap.L().Error("Failed to generate invitation code", zap.String("inviteeID", args.InviteeID))
+		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
+	}
+
+	return accept(200, model.InviteUserReply{InvCode: invCode}), NO_ERROR
+}
+
+// Utility functions.
+
 // Hash a password string using bcrypt with default cost.
 func (us *userSvc) hashPwd(pwd string) (string, error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
@@ -286,7 +330,7 @@ func (us *userSvc) genInvCode(decStr string) string {
 func (us *userSvc) verifyInvCode(codeStr string) (string, error) {
 	us.mu.Lock()
 
-	if _, exists := us.invCodes[codeStr]; exists {
+	if _, exists := us.invCodes[codeStr]; !exists {
 		// Invitation code does not exist.
 		us.mu.Unlock()
 

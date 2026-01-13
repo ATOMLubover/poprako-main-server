@@ -20,13 +20,13 @@ type BasicUser struct {
 	QQ       string `gorm:"qq"`
 	Nickname string `gorm:"nickname"`
 
-	IsAdmin               bool  `gorm:"is_admin"`
-	AssignedTranslatorAt  int64 `gorm:"assigned_translator_at"`
-	AssignedProofreaderAt int64 `gorm:"assigned_proofreader_at"`
-	AssignedTypesetterAt  int64 `gorm:"assigned_typesetter_at"`
-	AssignedRedrawerAt    int64 `gorm:"assigned_redrawer_at"`
-	AssignedReviewerAt    int64 `gorm:"assigned_reviewer_at"`
-	AssignedUploaderAt    int64 `gorm:"assigned_uploader_at"`
+	IsAdmin               bool   `gorm:"is_admin"`
+	AssignedTranslatorAt  *int64 `gorm:"assigned_translator_at"`
+	AssignedProofreaderAt *int64 `gorm:"assigned_proofreader_at"`
+	AssignedTypesetterAt  *int64 `gorm:"assigned_typesetter_at"`
+	AssignedRedrawerAt    *int64 `gorm:"assigned_redrawer_at"`
+	AssignedReviewerAt    *int64 `gorm:"assigned_reviewer_at"`
+	AssignedUploaderAt    *int64 `gorm:"assigned_uploader_at"`
 
 	CreatedAt int64 `gorm:"created_at"`
 	UpdatedAt int64 `gorm:"updated_at"`
