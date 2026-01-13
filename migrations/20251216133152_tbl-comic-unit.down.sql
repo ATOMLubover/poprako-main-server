@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS "comic_unit_tbl";

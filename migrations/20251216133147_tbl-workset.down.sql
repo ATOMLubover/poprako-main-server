@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS "workset_tbl";

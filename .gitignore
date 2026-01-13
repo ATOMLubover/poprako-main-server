@@ -1,0 +1,9 @@
+# dot files
+.*
+**/.*
+!.gitignore
+!.env.sample
+!.github
+
+# Output binaries.
+bin/
