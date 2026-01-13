@@ -30,5 +30,5 @@ func InitDB() Executor {
 
 type Repo interface {
 	Exec() Executor
-	withTransaction(tx Executor) Executor
+	withTrx(tx Executor) Executor
 }

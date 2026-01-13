@@ -4,9 +4,9 @@
 package state
 
 import (
-	"saas-template-go/internal/config"
-	"saas-template-go/internal/jwtcodec"
-	"saas-template-go/internal/svc"
+	"poprako-main-server/internal/config"
+	"poprako-main-server/internal/jwtcodec"
+	"poprako-main-server/internal/svc"
 )
 
 type AppState struct {

@@ -1,12 +1,16 @@
 package svc
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
+	"sync"
+	"time"
 
-	"saas-template-go/internal/jwtcodec"
-	"saas-template-go/internal/model"
-	"saas-template-go/internal/model/po"
-	"saas-template-go/internal/repo"
+	"poprako-main-server/internal/jwtcodec"
+	"poprako-main-server/internal/model"
+	"poprako-main-server/internal/model/po"
+	"poprako-main-server/internal/repo"
 
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -15,14 +19,19 @@ import (
 // UserSvc defines service operations for users.
 type UserSvc interface {
 	GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr)
-	GetUserInfoByEmail(email string) (SvcRslt[model.UserInfo], SvcErr)
+	GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr)
+
 	LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], SvcErr)
+
 	UpdateUserInfo(args model.UpdateUserArgs) SvcErr
 }
 
 type userSvc struct {
 	repo repo.UserRepo
 	jwt  *jwtcodec.Codec
+
+	mu       sync.Mutex
+	invCodes map[string]struct{}
 }
 
 // NewUserSvc creates a new UserSvc. If r is nil, the default repo implementation is used.
@@ -31,12 +40,16 @@ func NewUserSvc(r repo.UserRepo, jwt *jwtcodec.Codec) UserSvc {
 		panic("UserRepo cannot be nil")
 	}
 
-	return &userSvc{repo: r, jwt: jwt}
+	return &userSvc{
+		repo:     r,
+		jwt:      jwt,
+		invCodes: make(map[string]struct{}),
+	}
 }
 
 // Get user info by user ID.
 func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr) {
-	userBasics, err := us.repo.GetUserBasicByID(nil, userID)
+	userBasics, err := us.repo.GetUserByID(nil, userID)
 	if err != nil {
 		zap.L().Error("Failed to get user basics by ID", zap.String("userID", userID), zap.Error(err))
 		return SvcRslt[model.UserInfo]{}, DB_FAILURE
@@ -51,11 +64,11 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 	return accept(200, userInfo), NO_ERROR
 }
 
-// Get user info by email.
-func (us *userSvc) GetUserInfoByEmail(email string) (SvcRslt[model.UserInfo], SvcErr) {
-	userBasics, err := us.repo.GetUserBasicByEmail(nil, email)
+// Get user info by QQ.
+func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) {
+	userBasics, err := us.repo.GetUserByQQ(nil, qq)
 	if err != nil {
-		zap.L().Error("Failed to get user basics by email", zap.String("email", email), zap.Error(err))
+		zap.L().Error("Failed to get user basics by email", zap.String("email", qq), zap.Error(err))
 		return SvcRslt[model.UserInfo]{}, DB_FAILURE
 	}
 
@@ -70,54 +83,77 @@ func (us *userSvc) GetUserInfoByEmail(email string) (SvcRslt[model.UserInfo], Sv
 
 // Get or create user during login.
 func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], SvcErr) {
-	// Try to get existing user password hash by email.
-	// Notice: a optimistic lock based on UNIQUE emial constraint is used here.
-	pwdHash, err := us.repo.GetPwdHashByEmail(nil, args.Email)
-	if err != nil {
-		zap.L().Error("Failed to get user by email during login", zap.String("email", args.Email), zap.Error(err))
-		return SvcRslt[model.LoginToken]{}, DB_FAILURE
-	}
+	if args.InvCode != "" {
+		// If invitation code is provided, validate it.
+		// This happens when a new user is trying to register.
 
-	if pwdHash == "" {
-		// If the user does not exist, register a new user.
+		invCode, err := us.verifyInvCode(args.InvCode)
+		if err != nil {
+			zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
+			return SvcRslt[model.LoginToken]{}, INV_CODE_INVALID
+		}
+
+		if invCode != args.QQ {
+			zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
+			return SvcRslt[model.LoginToken]{}, INV_CODE_MISMATCH
+		}
+
+		// Verification passed.
+
 		newPwdHash, err := us.hashPwd(args.Password)
 		if err != nil {
-			zap.L().Error("Failed to hash password during user login", zap.String("email", args.Email), zap.Error(err))
-			return SvcRslt[model.LoginToken]{}, PWS_HASH_FAILURE
+			zap.L().Error("Failed to hash password during user login", zap.String("qq", args.QQ), zap.Error(err))
+			return SvcRslt[model.LoginToken]{}, PWD_HASH_FAILURE
+		}
+
+		newID, err := genUUID()
+		if err != nil {
+			zap.L().Error("Failed to generate UUID during user login", zap.String("qq", args.QQ), zap.Error(err))
+			return SvcRslt[model.LoginToken]{}, ID_GEN_FAILURE
 		}
 
 		newUser := &po.NewUser{
-			Email:        args.Email,
+			ID:           newID,
+			QQ:           args.QQ,
+			Nickname:     args.Nickname,
 			PasswordHash: newPwdHash,
 		}
 
 		// The insertion may fail due to UNIQUE email constraint violation.
 		// This is expected and acceptable in concurrent login scenarios.
-		if err := us.repo.CreateNewUser(nil, newUser); err != nil {
-			zap.L().Error("Failed to create new user during login", zap.String("email", args.Email), zap.Error(err))
+		if err := us.repo.CreateUser(nil, newUser); err != nil {
+			zap.L().Error("Failed to create new user during login", zap.String("qq", args.QQ), zap.Error(err))
 			return SvcRslt[model.LoginToken]{}, DB_FAILURE
 		}
 
 		// Creation succeeded, generate JWT token for the new user.
 		// ID is automatically populated after creation.
-		token, err := us.generateJWT(newUser.ID)
+		token, err := us.genJWT(newUser.ID)
 		if err != nil {
-			zap.L().Error("Failed to generate JWT for new user during login", zap.String("email", args.Email), zap.Error(err))
+			zap.L().Error("Failed to generate JWT for new user during login", zap.String("qq", args.QQ), zap.Error(err))
 			return SvcRslt[model.LoginToken]{}, DB_FAILURE
 		}
 
 		return accept(204, model.LoginToken{Token: token}), NO_ERROR
 	}
 
+	// No invitation code provided, treat as existing user login.
+
+	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
+	if err != nil {
+		zap.L().Error("Failed to get password hash during user login", zap.String("email", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginToken]{}, DB_FAILURE
+	}
+
 	// If the user exists, verify the password.
-	if !us.verifyPwd(pwdHash, args.Password) {
+	if !us.verifyPwd(secret.PwdHash, args.Password) {
 		return SvcRslt[model.LoginToken]{}, PWD_MISMATCH
 	}
 
 	// Verification succeeded, generate JWT token for the existing user.
-	token, err := us.generateJWT(args.Email)
+	token, err := us.genJWT(secret.ID)
 	if err != nil {
-		zap.L().Error("Failed to generate JWT for existing user during login", zap.String("email", args.Email), zap.Error(err))
+		zap.L().Error("Failed to generate JWT for existing user during login", zap.String("qq", args.QQ), zap.Error(err))
 		return SvcRslt[model.LoginToken]{}, DB_FAILURE
 	}
 
@@ -126,13 +162,62 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginToken], S
 
 // Update user info by user ID.
 func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
-	// TODO: A better protection logic in updating is needed.
-	// Esspecially email field.
-
-	updateUser := &po.UpdateUser{
+	updateUser := &po.PatchUser{
 		ID:       args.UserID,
-		Email:    args.Email,
+		QQ:       args.QQ,
 		Nickname: args.Nickname,
+	}
+
+	// Handle assignment fields.
+	var zero int64 = 0
+
+	if args.AssignTranslator != nil {
+		if *args.AssignTranslator {
+			now := time.Now().Unix()
+			updateUser.AssignedTranslatorAt = &now
+		} else {
+			updateUser.AssignedTranslatorAt = &zero
+		}
+	}
+	if args.AssignProofreader != nil {
+		if *args.AssignProofreader {
+			now := time.Now().Unix()
+			updateUser.AssignedProofreaderAt = &now
+		} else {
+			updateUser.AssignedProofreaderAt = &zero
+		}
+	}
+	if args.AssignTypesetter != nil {
+		if *args.AssignTypesetter {
+			now := time.Now().Unix()
+			updateUser.AssignedTypesetterAt = &now
+		} else {
+			updateUser.AssignedTypesetterAt = &zero
+		}
+	}
+	if args.AssignRedrawer != nil {
+		if *args.AssignRedrawer {
+			now := time.Now().Unix()
+			updateUser.AssignedRedrawerAt = &now
+		} else {
+			updateUser.AssignedRedrawerAt = &zero
+		}
+	}
+	if args.AssignReviewer != nil {
+		if *args.AssignReviewer {
+			now := time.Now().Unix()
+			updateUser.AssignedReviewerAt = &now
+		} else {
+			updateUser.AssignedReviewerAt = &zero
+		}
+	}
+	if args.AssignUploader != nil {
+		if *args.AssignUploader {
+			now := time.Now().Unix()
+			updateUser.AssignedUploaderAt = &now
+		} else {
+			updateUser.AssignedUploaderAt = &zero
+		}
 	}
 
 	if err := us.repo.UpdateUserByID(nil, updateUser); err != nil {
@@ -159,8 +244,9 @@ func (us *userSvc) verifyPwd(hashedPwd, plainPwd string) bool {
 }
 
 // Generate a JWT token for a given user ID.
-func (us *userSvc) generateJWT(userID string) (string, error) {
+func (us *userSvc) genJWT(userID string) (string, error) {
 	if us.jwt == nil {
+		zap.L().Warn("us.jwt not set in generateJWT")
 		return "", fmt.Errorf("jwt codec is not configured on userSvc")
 	}
 
@@ -170,4 +256,55 @@ func (us *userSvc) generateJWT(userID string) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (us *userSvc) genInvCode(decStr string) string {
+	// Encode invitation code: from dec string to hex string.
+	num, err := strconv.ParseInt(decStr, 10, 32)
+	if err != nil {
+		zap.L().Error("Failed to parse invitation code number", zap.String("decStr", decStr), zap.Error(err))
+		return ""
+	}
+
+	hexStr := strconv.FormatInt(num, 16)
+
+	us.mu.Lock()
+	defer us.mu.Unlock()
+
+	if len(us.invCodes) >= 50 {
+		// Limit the number of stored invitation codes up to 50.
+		zap.L().Warn("Failed add any more invitation code due to capacity issues")
+		return ""
+	}
+
+	us.invCodes[hexStr] = struct{}{}
+
+	return hexStr
+}
+
+// Check whether a invitation code is valid.
+func (us *userSvc) verifyInvCode(codeStr string) (string, error) {
+	us.mu.Lock()
+
+	if _, exists := us.invCodes[codeStr]; exists {
+		// Invitation code does not exist.
+		us.mu.Unlock()
+
+		return "", errors.New("invitation code invalid")
+	}
+
+	// Mark the invitation code as used.
+	delete(us.invCodes, codeStr)
+
+	us.mu.Unlock()
+
+	// Decode invitation code: from hex string to dec string.
+	hexNum, err := strconv.ParseInt(codeStr, 16, 32)
+	if err != nil {
+		return "", errors.New("Failed to parse invitation code")
+	}
+
+	decStr := strconv.FormatInt(hexNum, 10)
+
+	return decStr, nil
 }

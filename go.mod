@@ -1,4 +1,4 @@
-module saas-template-go
+module poprako-main-server
 
 go 1.24.0
 

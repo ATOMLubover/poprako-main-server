@@ -4,13 +4,13 @@ package main
 import (
 	"fmt"
 
-	"saas-template-go/internal/api/http"
-	"saas-template-go/internal/config"
-	"saas-template-go/internal/jwtcodec"
-	"saas-template-go/internal/logger"
-	"saas-template-go/internal/repo"
-	"saas-template-go/internal/state"
-	"saas-template-go/internal/svc"
+	"poprako-main-server/internal/api/http"
+	"poprako-main-server/internal/config"
+	"poprako-main-server/internal/jwtcodec"
+	"poprako-main-server/internal/logger"
+	"poprako-main-server/internal/repo"
+	"poprako-main-server/internal/state"
+	"poprako-main-server/internal/svc"
 
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"

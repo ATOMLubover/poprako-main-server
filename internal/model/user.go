@@ -8,8 +8,10 @@ type UserInfo struct {
 }
 
 type LoginArgs struct {
-	Email    string `json:"email"`
+	QQ       string `json:"qq"`
 	Password string `json:"password"`
+	Nickname string `json:"nickname,omitempty"`
+	InvCode  string `json:"inv_code,omitempty"`
 }
 
 type LoginToken struct {
@@ -17,7 +19,14 @@ type LoginToken struct {
 }
 
 type UpdateUserArgs struct {
-	UserID   string `json:"user_id"`
-	Email    string `json:"email,omitempty"`
-	Nickname string `json:"nickname,omitempty"`
+	UserID            string  `json:"user_id"`
+	QQ                *string `json:"qq,omitempty"`
+	Nickname          *string `json:"nickname,omitempty"`
+	IsAdmin           *bool   `json:"is_admin,omitempty"`
+	AssignTranslator  *bool   `json:"assign_translator,omitempty"`
+	AssignProofreader *bool   `json:"assign_proofreader,omitempty"`
+	AssignTypesetter  *bool   `json:"assign_typesetter,omitempty"`
+	AssignRedrawer    *bool   `json:"assign_redrawer,omitempty"`
+	AssignReviewer    *bool   `json:"assign_reviewer,omitempty"`
+	AssignUploader    *bool   `json:"assign_uploader,omitempty"`
 }

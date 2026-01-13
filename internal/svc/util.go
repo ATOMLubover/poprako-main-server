@@ -1,9 +1,9 @@
-package repo
+package svc
 
 import "github.com/google/uuid"
 
 func genUUID() (string, error) {
-	uuid, err := uuid.NewRandom()
+	uuid, err := uuid.NewV7()
 	if err != nil {
 		return "", err
 	}

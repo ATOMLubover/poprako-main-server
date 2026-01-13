@@ -1,9 +1,9 @@
 package http
 
 import (
-	"saas-template-go/internal/model"
-	"saas-template-go/internal/state"
-	"saas-template-go/internal/svc"
+	"poprako-main-server/internal/model"
+	"poprako-main-server/internal/state"
+	"poprako-main-server/internal/svc"
 
 	"github.com/kataras/iris/v12"
 )
@@ -35,7 +35,7 @@ func GetUserInfo(ctx iris.Context, appState *state.AppState) {
 	}
 
 	// Build service and try to get user info.
-	res, err := appState.UserSvc.GetUserInfoByEmail(email)
+	res, err := appState.UserSvc.GetUserInfoByQQ(email)
 	if err != svc.NO_ERROR {
 		reject(ctx, err.Code(), err.Msg())
 		return

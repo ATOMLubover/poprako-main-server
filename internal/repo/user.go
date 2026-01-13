@@ -4,20 +4,23 @@ import (
 	"errors"
 	"fmt"
 
-	"saas-template-go/internal/model/po"
+	"poprako-main-server/internal/model/po"
 )
-
-// Note: model structs have been moved to internal/model/po package.
 
 // UserRepo defines the interface for user repository operations.
 type UserRepo interface {
-	GetUserBasicByID(ex Executor, userID string) (*po.UserBasic, error)
-	GetUserBasicByEmail(ex Executor, email string) (*po.UserBasic, error)
-	GetUserBasicsByIDs(ex Executor, userIDs []string) ([]po.UserBasic, error)
-	GetUserBasicsByEmails(ex Executor, emails []string) ([]po.UserBasic, error)
-	GetPwdHashByEmail(ex Executor, email string) (string, error)
-	CreateNewUser(ex Executor, newUser *po.NewUser) error
-	UpdateUserByID(ex Executor, updateUser *po.UpdateUser) error
+	Repo
+
+	GetUserByID(ex Executor, userID string) (*po.BasicUser, error)
+	GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error)
+	// GetUsersByIDs(ex Executor, userIDs []string) ([]po.BasicUser, error)
+	// GetUsersByQQs(ex Executor, qqs []string) ([]po.BasicUser, error)
+
+	GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error)
+
+	CreateUser(ex Executor, newUser *po.NewUser) error
+
+	UpdateUserByID(ex Executor, updateUser *po.PatchUser) error
 }
 
 // Default implementation of UserRepo.
@@ -30,12 +33,12 @@ func NewUserRepo(ex Executor) UserRepo {
 }
 
 // Executor returns the Executor associated with the repository.
-func (ur *userRepo) Executor() Executor {
+func (ur *userRepo) Exec() Executor {
 	return ur.ex
 }
 
-// withTransaction returns the effective executor: tx if non-nil, otherwise repo's executor.
-func (ur *userRepo) withTransaction(tx Executor) Executor {
+// withTrx returns the effective executor: tx if non-nil, otherwise repo's executor.
+func (ur *userRepo) withTrx(tx Executor) Executor {
 	if tx != nil {
 		return tx
 	}
@@ -45,25 +48,18 @@ func (ur *userRepo) withTransaction(tx Executor) Executor {
 
 // Create a new user.
 // The generated ID is returned in newUser.ID.
-func (ur *userRepo) CreateNewUser(ex Executor, newUser *po.NewUser) error {
-	ex = ur.withTransaction(ex)
-
-	newID, err := genUUID()
-	if err != nil {
-		return err
-	}
-
-	newUser.ID = newID
+func (ur *userRepo) CreateUser(ex Executor, newUser *po.NewUser) error {
+	ex = ur.withTrx(ex)
 
 	return ex.Create(newUser).Error
 }
 
 // Get user basic by ID.
-// A nil UserBasic pointer is returned if no user is found.
-func (ur *userRepo) GetUserBasicByID(ex Executor, userID string) (*po.UserBasic, error) {
-	ex = ur.withTransaction(ex)
+// A nil BasicUser pointer is returned if no user is found.
+func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, error) {
+	ex = ur.withTrx(ex)
 
-	ub := &po.UserBasic{}
+	ub := &po.BasicUser{}
 
 	if err := ex.
 		Where("id = ?", userID).
@@ -75,85 +71,146 @@ func (ur *userRepo) GetUserBasicByID(ex Executor, userID string) (*po.UserBasic,
 	return ub, nil
 }
 
-// Get user basic by email.
-// A nil UserBasic pointer is returned if no user is found.
-func (ur *userRepo) GetUserBasicByEmail(ex Executor, email string) (*po.UserBasic, error) {
-	ex = ur.withTransaction(ex)
+// Get user basic by QQ.
+// A nil BasicUser pointer is returned if no user is found.
+func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
+	ex = ur.withTrx(ex)
 
-	ub := &po.UserBasic{}
+	ub := &po.BasicUser{}
 
 	if err := ex.
-		Where("email = ?", email).
+		Where("qq = ?", qq).
 		First(ub).
 		Error; err != nil {
-		return nil, fmt.Errorf("Failed to get user by email: %w", err)
+		return nil, fmt.Errorf("Failed to get user by qq: %w", err)
 	}
 
 	return ub, nil
 }
 
-// Get a list of user basics by their IDs.
-// A zero-length slice is returned if no users are found.
-func (ur *userRepo) GetUserBasicsByIDs(ex Executor, userIDs []string) ([]po.UserBasic, error) {
-	ex = ur.withTransaction(ex)
+// // Get a list of user basics by their IDs.
+// // A zero-length slice is returned if no users are found.
+// func (ur *userRepo) GetUsersByIDs(ex Executor, userIDs []string) ([]po.BasicUser, error) {
+// 	ex = ur.withTrx(ex)
 
-	var ubLst []po.UserBasic
+// 	var ubLst []po.BasicUser
 
-	if err := ex.
-		Where("id IN ?", userIDs).
-		Find(&ubLst).
-		Error; err != nil {
-		return nil, fmt.Errorf("Failed to get user basics by IDs: %w", err)
-	}
+// 	if err := ex.
+// 		Where("id IN ?", userIDs).
+// 		Find(&ubLst).
+// 		Error; err != nil {
+// 		return nil, fmt.Errorf("Failed to get user basics by IDs: %w", err)
+// 	}
 
-	return ubLst, nil
-}
+// 	return ubLst, nil
+// }
 
-// Get a list of user basics by their emails.
-// A zero-length slice is returned if no users are found.
-func (ur *userRepo) GetUserBasicsByEmails(ex Executor, emails []string) ([]po.UserBasic, error) {
-	ex = ur.withTransaction(ex)
+// // Get a list of user basics by their qqs.
+// // A zero-length slice is returned if no users are found.
+// func (ur *userRepo) GetUsersByQQs(ex Executor, qqs []string) ([]po.BasicUser, error) {
+// 	ex = ur.withTrx(ex)
 
-	var ubLst []po.UserBasic
+// 	var ubLst []po.BasicUser
 
-	if err := ex.
-		Where("email IN ?", emails).
-		Find(&ubLst).
-		Error; err != nil {
-		return nil, fmt.Errorf("Failed to get user basics by emails: %w", err)
-	}
+// 	if err := ex.
+// 		Where("qq = ANY(?)", qqs).
+// 		Find(&ubLst).
+// 		Error; err != nil {
+// 		return nil, fmt.Errorf("Failed to get user basics by QQs: %w", err)
+// 	}
 
-	return ubLst, nil
-}
+// 	return ubLst, nil
+// }
 
-// Independent functions.
+func (ur *userRepo) GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error) {
+	ex = ur.withTrx(ex)
 
-// Get password hash by email. This is typically used during login.
-// An empty string is returned if no user is found.
-func (ur *userRepo) GetPwdHashByEmail(ex Executor, email string) (string, error) {
-	ex = ur.withTransaction(ex)
-
-	var passwordHash string
+	var user po.SecretUser
 
 	if err := ex.
-		Table(po.USER_TABLE).
-		Select("password_hash").
-		Where("email = ?", email).
-		Scan(&passwordHash).
+		Where("qq = ?", qq).
+		First(&user).
 		Error; err != nil {
-		return "", fmt.Errorf("Failed to get password hash by email: %w", err)
+		return nil, fmt.Errorf("Failed to get secret user by qq: %w", err)
 	}
 
-	return passwordHash, nil
+	return &user, nil
 }
 
 // Update a user's info by ID.
-func (ur *userRepo) UpdateUserByID(ex Executor, updateUser *po.UpdateUser) error {
-	if updateUser.ID == "" {
+func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
+	if patchUser.ID == "" {
 		return errors.New("user ID is required for update")
 	}
 
-	ex = ur.withTransaction(ex)
+	ex = ur.withTrx(ex)
 
-	return ex.Save(updateUser).Error
+	updates := map[string]interface{}{}
+
+	if patchUser.QQ != nil {
+		updates["qq"] = *patchUser.QQ
+	}
+	if patchUser.Nickname != nil {
+		updates["nickname"] = *patchUser.Nickname
+	}
+	if patchUser.IsAdmin != nil {
+		updates["is_admin"] = *patchUser.IsAdmin
+	}
+
+	if patchUser.AssignedTranslatorAt != nil {
+		if *patchUser.AssignedTranslatorAt == 0 {
+			updates["assigned_translator_at"] = nil
+		} else {
+			updates["assigned_translator_at"] = *patchUser.AssignedTranslatorAt
+		}
+	}
+
+	if patchUser.AssignedProofreaderAt != nil {
+		if *patchUser.AssignedProofreaderAt == 0 {
+			updates["assigned_proofreader_at"] = nil
+		} else {
+			updates["assigned_proofreader_at"] = *patchUser.AssignedProofreaderAt
+		}
+	}
+
+	if patchUser.AssignedTypesetterAt != nil {
+		if *patchUser.AssignedTypesetterAt == 0 {
+			updates["assigned_typesetter_at"] = nil
+		} else {
+			updates["assigned_typesetter_at"] = *patchUser.AssignedTypesetterAt
+		}
+	}
+
+	if patchUser.AssignedRedrawerAt != nil {
+		if *patchUser.AssignedRedrawerAt == 0 {
+			updates["assigned_redrawer_at"] = nil
+		} else {
+			updates["assigned_redrawer_at"] = *patchUser.AssignedRedrawerAt
+		}
+	}
+
+	if patchUser.AssignedReviewerAt != nil {
+		if *patchUser.AssignedReviewerAt == 0 {
+			updates["assigned_reviewer_at"] = nil
+		} else {
+			updates["assigned_reviewer_at"] = *patchUser.AssignedReviewerAt
+		}
+	}
+
+	if patchUser.AssignedUploaderAt != nil {
+		if *patchUser.AssignedUploaderAt == 0 {
+			updates["assigned_uploader_at"] = nil
+		} else {
+			updates["assigned_uploader_at"] = *patchUser.AssignedUploaderAt
+		}
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return ex.Model(&po.PatchUser{}).
+		Where("id = ?", patchUser.ID).
+		Updates(updates).
+		Error
 }

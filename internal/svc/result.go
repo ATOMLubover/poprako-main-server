@@ -35,13 +35,19 @@ const (
 	// Generic database failure.
 	DB_FAILURE SvcErr = "Database failure"
 	// Password hashing failure.
-	PWS_HASH_FAILURE SvcErr = "Password hashing failure"
+	PWD_HASH_FAILURE SvcErr = "Password hashing failure"
 	// User not found.
 	USER_NOT_FOUND SvcErr = "User not found"
 	// Password mismatch.
 	PWD_MISMATCH SvcErr = "Password mismatch"
+	// Invalid invitation code.
+	INV_CODE_INVALID SvcErr = "Invalid invitation code"
+	// Invitation code mismatch.
+	INV_CODE_MISMATCH SvcErr = "Invitation code mismatch with qq"
 	// User ID mismatch in args and path.
 	USER_ID_MISMATCH SvcErr = "User ID mismatch"
+	// Failed to generate UUID.
+	ID_GEN_FAILURE SvcErr = "Failed to generate ID"
 )
 
 // Get a API error code for the ServError.
@@ -51,7 +57,7 @@ func (e *SvcErr) Code() uint16 {
 		return 200
 	case DB_FAILURE:
 		return 500
-	case PWS_HASH_FAILURE:
+	case PWD_HASH_FAILURE:
 		return 500
 	case USER_NOT_FOUND:
 		return 404
@@ -71,7 +77,7 @@ func (e *SvcErr) Msg() string {
 		return ""
 	case DB_FAILURE:
 		return "服务器内部错误"
-	case PWS_HASH_FAILURE:
+	case PWD_HASH_FAILURE:
 		return "服务器内部错误"
 	case USER_NOT_FOUND:
 		return "用户不存在"

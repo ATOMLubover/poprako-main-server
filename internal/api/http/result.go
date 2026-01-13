@@ -1,7 +1,7 @@
 package http
 
 import (
-	"saas-template-go/internal/svc"
+	"poprako-main-server/internal/svc"
 
 	"github.com/kataras/iris/v12"
 )
