@@ -1,8 +1,10 @@
 # AI Coding Agent Instructions for `saas_template_go`
 
+**After any patch, there is necessity to run `funtioons.get_errors` MCP.**
+
 ## Project Overview
 
-This project is a Go-based SaaS template designed with a modular architecture. It includes components for API handling, service logic, data models, and repository patterns. The structure is optimized for scalability and maintainability, with clear separation of concerns.
+This project is a Go-based Trans-proofread website designed with a modular architecture. It includes components for API handling, service logic, data models, and repository patterns. The structure is optimized for scalability and maintainability, with clear separation of concerns.
 
 ### Key Components
 

@@ -1,9 +1,6 @@
 package svc
 
 import (
-	"errors"
-	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -13,7 +10,6 @@ import (
 	"poprako-main-server/internal/repo"
 
 	"go.uber.org/zap"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // UserSvc defines service operations for users.
@@ -21,9 +17,13 @@ type UserSvc interface {
 	GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr)
 	GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr)
 
+	InviteUser(operUserID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr)
 	LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr)
 
 	UpdateUserInfo(args model.UpdateUserArgs) SvcErr
+	AssignUserRole(opID string, args model.AssignUserRoleArgs) SvcErr
+
+	GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.UserInfo], SvcErr)
 }
 
 type userSvc struct {
@@ -160,7 +160,7 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 
 	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
 	if err != nil {
-		zap.L().Error("Failed to get password hash during user login", zap.String("email", args.QQ), zap.Error(err))
+		zap.L().Warn("Failed to get password hash during user login", zap.String("email", args.QQ), zap.Error(err))
 		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
 
@@ -187,57 +187,57 @@ func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 		Nickname: args.Nickname,
 	}
 
-	// Handle assignment fields.
-	var zero int64 = 0
+	// // Handle assignment fields.
+	// zero := int64(0)
 
-	if args.AssignTranslator != nil {
-		if *args.AssignTranslator {
-			now := time.Now().Unix()
-			updateUser.AssignedTranslatorAt = &now
-		} else {
-			updateUser.AssignedTranslatorAt = &zero
-		}
-	}
-	if args.AssignProofreader != nil {
-		if *args.AssignProofreader {
-			now := time.Now().Unix()
-			updateUser.AssignedProofreaderAt = &now
-		} else {
-			updateUser.AssignedProofreaderAt = &zero
-		}
-	}
-	if args.AssignTypesetter != nil {
-		if *args.AssignTypesetter {
-			now := time.Now().Unix()
-			updateUser.AssignedTypesetterAt = &now
-		} else {
-			updateUser.AssignedTypesetterAt = &zero
-		}
-	}
-	if args.AssignRedrawer != nil {
-		if *args.AssignRedrawer {
-			now := time.Now().Unix()
-			updateUser.AssignedRedrawerAt = &now
-		} else {
-			updateUser.AssignedRedrawerAt = &zero
-		}
-	}
-	if args.AssignReviewer != nil {
-		if *args.AssignReviewer {
-			now := time.Now().Unix()
-			updateUser.AssignedReviewerAt = &now
-		} else {
-			updateUser.AssignedReviewerAt = &zero
-		}
-	}
-	if args.AssignUploader != nil {
-		if *args.AssignUploader {
-			now := time.Now().Unix()
-			updateUser.AssignedUploaderAt = &now
-		} else {
-			updateUser.AssignedUploaderAt = &zero
-		}
-	}
+	// if args.AssignTranslator != nil {
+	// 	if *args.AssignTranslator {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedTranslatorAt = &now
+	// 	} else {
+	// 		updateUser.AssignedTranslatorAt = &zero
+	// 	}
+	// }
+	// if args.AssignProofreader != nil {
+	// 	if *args.AssignProofreader {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedProofreaderAt = &now
+	// 	} else {
+	// 		updateUser.AssignedProofreaderAt = &zero
+	// 	}
+	// }
+	// if args.AssignTypesetter != nil {
+	// 	if *args.AssignTypesetter {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedTypesetterAt = &now
+	// 	} else {
+	// 		updateUser.AssignedTypesetterAt = &zero
+	// 	}
+	// }
+	// if args.AssignRedrawer != nil {
+	// 	if *args.AssignRedrawer {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedRedrawerAt = &now
+	// 	} else {
+	// 		updateUser.AssignedRedrawerAt = &zero
+	// 	}
+	// }
+	// if args.AssignReviewer != nil {
+	// 	if *args.AssignReviewer {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedReviewerAt = &now
+	// 	} else {
+	// 		updateUser.AssignedReviewerAt = &zero
+	// 	}
+	// }
+	// if args.AssignUploader != nil {
+	// 	if *args.AssignUploader {
+	// 		now := time.Now().Unix()
+	// 		updateUser.AssignedUploaderAt = &now
+	// 	} else {
+	// 		updateUser.AssignedUploaderAt = &zero
+	// 	}
+	// }
 
 	if err := us.repo.UpdateUserByID(nil, updateUser); err != nil {
 		zap.L().Error("Failed to update user info", zap.String("userID", args.UserID), zap.Error(err))
@@ -270,85 +270,133 @@ func (us *userSvc) InviteUser(operUserID string, args model.InviteUserArgs) (Svc
 	return accept(200, model.InviteUserReply{InvCode: invCode}), NO_ERROR
 }
 
-// Utility functions.
-
-// Hash a password string using bcrypt with default cost.
-func (us *userSvc) hashPwd(pwd string) (string, error) {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(pwd), bcrypt.DefaultCost)
+func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.UserInfo], SvcErr) {
+	userBasics, err := us.repo.RetrieveUsers(nil, opt)
 	if err != nil {
-		return "", fmt.Errorf("Failed to hash password: %w", err)
+		zap.L().Error("Failed to retrieve user basics", zap.Error(err))
+		return SvcRslt[[]model.UserInfo]{}, DB_FAILURE
 	}
 
-	return string(hashed), nil
+	userInfos := make([]model.UserInfo, 0, len(userBasics))
+
+	for _, ub := range userBasics {
+		ui := model.UserInfo{
+			UserID:    ub.ID,
+			IsAdmin:   ub.IsAdmin,
+			Nickname:  ub.Nickname,
+			CreatedAt: ub.CreatedAt,
+		}
+		if ub.AssignedTranslatorAt != nil {
+			ui.AssignedTranslatorAt = *ub.AssignedTranslatorAt
+		}
+		if ub.AssignedProofreaderAt != nil {
+			ui.AssignedProofreaderAt = *ub.AssignedProofreaderAt
+		}
+		if ub.AssignedTypesetterAt != nil {
+			ui.AssignedTypesetterAt = *ub.AssignedTypesetterAt
+		}
+		if ub.AssignedRedrawerAt != nil {
+			ui.AssignedRedrawerAt = *ub.AssignedRedrawerAt
+		}
+		if ub.AssignedReviewerAt != nil {
+			ui.AssignedReviewerAt = *ub.AssignedReviewerAt
+		}
+		if ub.AssignedUploaderAt != nil {
+			ui.AssignedUploaderAt = *ub.AssignedUploaderAt
+		}
+
+		userInfos = append(userInfos, ui)
+	}
+
+	return accept(200, userInfos), NO_ERROR
 }
 
-// Verify a plain password against a bcrypt hashed password.
-func (us *userSvc) verifyPwd(hashedPwd, plainPwd string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hashedPwd), []byte(plainPwd)) == nil
-}
+func (us *userSvc) AssignUserRole(
+	opID string,
+	args model.AssignUserRoleArgs,
+) SvcErr {
+	var patch po.PatchUser
 
-// Generate a JWT token for a given user ID.
-func (us *userSvc) genJWT(userID string) (string, error) {
-	if us.jwt == nil {
-		zap.L().Warn("us.jwt not set in generateJWT")
-		return "", fmt.Errorf("jwt codec is not configured on userSvc")
+	hasChange := false
+
+	now := time.Now().Unix()
+	zero := int64(0)
+
+	roles := args.Roles
+
+	for _, r := range roles {
+		switch r.Role {
+		case ROLE_TRANSLATOR:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedTranslatorAt = &now
+			} else {
+				patch.AssignedTranslatorAt = &zero
+			}
+
+		case ROLE_PROOFREADER:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedProofreaderAt = &now
+			} else {
+				patch.AssignedProofreaderAt = &zero
+			}
+
+		case ROLE_TYPESETTER:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedTypesetterAt = &now
+			} else {
+				patch.AssignedTypesetterAt = &zero
+			}
+
+		case ROLE_REDRAWER:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedRedrawerAt = &now
+			} else {
+				patch.AssignedRedrawerAt = &zero
+			}
+
+		case ROLE_REVIEWER:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedReviewerAt = &now
+			} else {
+				patch.AssignedReviewerAt = &zero
+			}
+
+		case ROLE_UPLOADER:
+			hasChange = true
+
+			if r.Assigned {
+				patch.AssignedUploaderAt = &now
+			} else {
+				patch.AssignedUploaderAt = &zero
+			}
+
+		default:
+			zap.L().Warn("Unknown role string in AssignUserRole", zap.String("role", r.Role))
+			return INVALID_ROLE_DATA
+		}
 	}
 
-	token, err := us.jwt.Encode(userID)
-	if err != nil {
-		return "", fmt.Errorf("Failed to generate JWT: %w", err)
+	if !hasChange {
+		zap.L().Warn("No valid role changes in AssignUserRole", zap.String("userID", args.UserID), zap.Any("roles", roles))
+		return INVALID_ROLE_DATA
 	}
 
-	return token, nil
-}
+	patch.ID = args.UserID
 
-func (us *userSvc) genInvCode(decStr string) string {
-	// Encode invitation code: from dec string to hex string.
-	num, err := strconv.ParseInt(decStr, 10, 32)
-	if err != nil {
-		zap.L().Error("Failed to parse invitation code number", zap.String("decStr", decStr), zap.Error(err))
-		return ""
+	if err := us.repo.UpdateUserByID(nil, &patch); err != nil {
+		zap.L().Error("Failed to update user roles in AssignUserRole", zap.String("userID", args.UserID), zap.Error(err))
+		return DB_FAILURE
 	}
 
-	hexStr := strconv.FormatInt(num, 16)
-
-	us.mu.Lock()
-	defer us.mu.Unlock()
-
-	if len(us.invCodes) >= 50 {
-		// Limit the number of stored invitation codes up to 50.
-		zap.L().Warn("Failed add any more invitation code due to capacity issues")
-		return ""
-	}
-
-	us.invCodes[hexStr] = struct{}{}
-
-	return hexStr
-}
-
-// Check whether a invitation code is valid.
-func (us *userSvc) verifyInvCode(codeStr string) (string, error) {
-	us.mu.Lock()
-
-	if _, exists := us.invCodes[codeStr]; !exists {
-		// Invitation code does not exist.
-		us.mu.Unlock()
-
-		return "", errors.New("invitation code invalid")
-	}
-
-	// Mark the invitation code as used.
-	delete(us.invCodes, codeStr)
-
-	us.mu.Unlock()
-
-	// Decode invitation code: from hex string to dec string.
-	hexNum, err := strconv.ParseInt(codeStr, 16, 32)
-	if err != nil {
-		return "", errors.New("Failed to parse invitation code")
-	}
-
-	decStr := strconv.FormatInt(hexNum, 10)
-
-	return decStr, nil
+	return NO_ERROR
 }

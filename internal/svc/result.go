@@ -34,6 +34,8 @@ const (
 	NO_ERROR SvcErr = ""
 	// Generic database failure.
 	DB_FAILURE SvcErr = "Database failure"
+	// Failed to get user data.
+	USER_FETCH_FAILURE SvcErr = "Failed to fetch user data"
 	// Password hashing failure.
 	PWD_HASH_FAILURE SvcErr = "Password hashing failure"
 	// User not found.
@@ -50,6 +52,12 @@ const (
 	ID_GEN_FAILURE SvcErr = "Failed to generate ID"
 	// Permission denied.
 	PERMISSION_DENIED SvcErr = "Permission denied"
+	// Invalid comic unit data.
+	INVALID_UNIT_DATA SvcErr = "Invalid comic unit data"
+	// Invalid comic page data.
+	INVALID_PAGE_DATA SvcErr = "Invalid comic page data"
+	// Invalid role data.
+	INVALID_ROLE_DATA SvcErr = "Invalid role data"
 )
 
 // Get a API error code for the ServError.
@@ -59,6 +67,8 @@ func (e *SvcErr) Code() uint16 {
 		return 200
 	case DB_FAILURE:
 		return 500
+	case USER_FETCH_FAILURE:
+		return 400 // Considered as bad request
 	case PWD_HASH_FAILURE:
 		return 500
 	case USER_NOT_FOUND:
@@ -75,6 +85,12 @@ func (e *SvcErr) Code() uint16 {
 		return 500
 	case PERMISSION_DENIED:
 		return 403
+	case INVALID_UNIT_DATA:
+		return 400
+	case INVALID_PAGE_DATA:
+		return 400
+	case INVALID_ROLE_DATA:
+		return 400
 	default:
 		return 500
 	}
@@ -91,6 +107,8 @@ func (e *SvcErr) Msg() string {
 		return "服务器内部错误"
 	case PWD_HASH_FAILURE:
 		return "服务器内部错误"
+	case USER_FETCH_FAILURE:
+		return "获取用户信息失败"
 	case USER_NOT_FOUND:
 		return "用户不存在"
 	case PWD_MISMATCH:
@@ -105,6 +123,12 @@ func (e *SvcErr) Msg() string {
 		return "服务器内部错误"
 	case PERMISSION_DENIED:
 		return "权限不足"
+	case INVALID_UNIT_DATA:
+		return "无效的翻译单元数据"
+	case INVALID_PAGE_DATA:
+		return "无效的页面数据"
+	case INVALID_ROLE_DATA:
+		return "无效的任命数据"
 	default:
 		return "服务器内部错误"
 	}

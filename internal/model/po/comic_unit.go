@@ -48,8 +48,8 @@ type BasicComicUnit struct {
 }
 
 type PatchComicUnit struct {
-	ID          string   `gorm:"id;primaryKey"`
-	PageID      *string  `gorm:"page_id"`
+	ID string `gorm:"id;primaryKey"`
+
 	Index       *int64   `gorm:"index"`
 	XCoordinate *float64 `gorm:"x_coordinate"`
 	YCoordinate *float64 `gorm:"y_coordinate"`

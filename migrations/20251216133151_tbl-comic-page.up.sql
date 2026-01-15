@@ -5,7 +5,7 @@ CREATE TABLE "comic_page_tbl" (
     "index" INTEGER NOT NULL,
     
     "oss_key" TEXT NOT NULL,
-    "size_bytes" INTEGER NOT NULL,
+    -- "size_bytes" INTEGER NOT NULL,
     
     "uploaded" BOOLEAN DEFAULT TRUE NOT NULL,
     

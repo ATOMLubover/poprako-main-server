@@ -13,26 +13,92 @@ func Run(appState state.AppState) {
 	// with logger and recovery middleware already attached.
 	app := iris.Default()
 
-	// `appState` is injected here as a dependency.
-	// Every handler below can receive it as a parameter.
-	//
-	// NOTE: the type of `appState` must be a pointer type,
-	// as it will then be shared across all running handlers.
-	app.RegisterDependency(&appState)
-
 	// Apply handlers to routes.
-	routeApp(app)
+	routeApp(app, &appState)
 
 	// Run the application.
 	runServer(app, appState.Cfg.Port)
 }
 
 // Route application endpoints.
-func routeApp(app *iris.Application) {
+func routeApp(app *iris.Application, appState *state.AppState) {
+	api := app.Party("/api/v1")
+
+	// Public routes (no auth required)
+	api.Post("/login", LoginUser(appState))
+
+	// Apply auth middleware to all routes below
+	api.Use(AuthMiddleware(appState))
+
+	users := api.Party("/users")
+	{
+		users.Get("", RetrieveUserInfos(appState))
+		users.Get("/{user_id:string}", GetUserInfoByID(appState))
+		users.Post("/invite", InviteUser(appState))
+		users.Patch("/{user_id:string}/role", AssignUserRole(appState))
+		users.Patch("/{user_id:string}", UpdateUserInfo(appState))
+	}
+
+	worksets := api.Party("/worksets")
+	{
+		worksets.Get("", RetrieveWorksets(appState))
+		worksets.Get("/{workset_id:string}", GetWorksetByID(appState))
+		worksets.Post("", CreateWorkset(appState))
+		worksets.Patch("/{workset_id:string}", UpdateWorksetByID(appState))
+	}
+
+	comics := api.Party("/comics")
+	{
+		comics.Get("", RetrieveComicBriefs(appState))
+		comics.Get("/{comic_id:string}", GetComicInfoByID(appState))
+		comics.Post("", CreateComic(appState))
+		comics.Patch("/{comic_id:string}", UpdateComicByID(appState))
+	}
+
+	worksetComics := api.Party("/worksets/{workset_id:string}/comics")
+	{
+		worksetComics.Get("", GetComicBriefsByWorksetID(appState))
+	}
+
+	pages := api.Party("/pages")
+	{
+		pages.Get("/{page_id:string}", GetPageByID(appState))
+		pages.Post("", CreatePages(appState))
+		pages.Patch("/{page_id:string}", UpdatePageByID(appState))
+	}
+
+	comicPages := api.Party("/comics/{comic_id:string}/pages")
+	{
+		comicPages.Get("", GetPagesByComicID(appState))
+	}
+
+	units := api.Party("/pages/{page_id:string}/units")
+	{
+		units.Get("", GetUnitsByPageID(appState))
+		units.Post("", CreateUnits(appState))
+		units.Patch("", UpdateUnits(appState))
+		units.Delete("", DeleteUnits(appState))
+	}
+
+	asgns := api.Party("/assignments")
+	{
+		asgns.Get("/{asgn_id:string}", GetAsgnByID(appState))
+		asgns.Post("", CreateAsgn(appState))
+		asgns.Patch("/{asgn_id:string}", UpdateAsgn(appState))
+	}
+
+	comicAsgns := api.Party("/comics/{comic_id:string}/assignments")
+	{
+		comicAsgns.Get("", GetAsgnsByComicID(appState))
+	}
+
+	userAsgns := api.Party("/users/{user_id:string}/assignments")
+	{
+		userAsgns.Get("", GetAsgnsByUserID(appState))
+	}
 }
 
 func runServer(app *iris.Application, port uint16) {
-	// TODO: make app runs at 0.0.0.0.
 	addr := ":" + strconv.Itoa(int(port))
 
 	app.Listen(addr)

@@ -16,12 +16,36 @@ type NewComic struct {
 	Description *string `gorm:"description"`
 }
 
+type BriefComic struct {
+	ID string `gorm:"id;primaryKey"`
+
+	WorksetID    string `gorm:"workset_id"`
+	WorksetIndex string `gorm:"workset_index"`
+	Index        int64  `gorm:"index"`
+
+	Author string `gorm:"author"`
+	Title  string `gorm:"title"`
+
+	TranslatingStartedAt    *int64 `gorm:"translating_started_at"`
+	TranslatingCompletedAt  *int64 `gorm:"translating_completed_at"`
+	ProofreadingStartedAt   *int64 `gorm:"proofreading_started_at"`
+	ProofreadingCompletedAt *int64 `gorm:"proofreading_completed_at"`
+	TypesettingStartedAt    *int64 `gorm:"typesetting_started_at"`
+	TypesettingCompletedAt  *int64 `gorm:"typesetting_completed_at"`
+	ReviewingCompletedAt    *int64 `gorm:"reviewing_completed_at"`
+	UploadingCompletedAt    *int64 `gorm:"uploading_completed_at"`
+}
+
 type BasicComic struct {
 	ID string `gorm:"id;primaryKey"`
 
-	WorksetID   string  `gorm:"workset_id"`
-	Index       int64   `gorm:"index"`
-	CreatorID   string  `gorm:"creator_id"`
+	WorksetID    string `gorm:"workset_id"`
+	WorksetIndex string `gorm:"workset_index"`
+	Index        int64  `gorm:"index"`
+
+	CreatorID       string `gorm:"creator_id"`
+	CreatorNickname string
+
 	Author      string  `gorm:"author"`
 	Title       string  `gorm:"title"`
 	Comment     *string `gorm:"comment"`
@@ -68,6 +92,8 @@ type PatchComic struct {
 }
 
 func (*NewComic) TableName() string { return COMIC_TABLE }
+
+func (*BriefComic) TableName() string { return COMIC_TABLE }
 
 func (*BasicComic) TableName() string { return COMIC_TABLE }
 

@@ -7,30 +7,30 @@ import (
 	"poprako-main-server/internal/model/po"
 )
 
-// ComicAssignmentRepo defines repository operations for comic assignments.
-type ComicAssignmentRepo interface {
+// ComicAsgnRepo defines repository operations for comic assignments.
+type ComicAsgnRepo interface {
 	Repo
 
-	GetAssignmentByID(ex Executor, assignmentID string) (*po.BasicComicAssignment, error)
-	GetAssignmentsByComicID(ex Executor, comicID string) ([]po.BasicComicAssignment, error)
-	GetAssignmentsByUserID(ex Executor, userID string) ([]po.BasicComicAssignment, error)
+	GetAsgnByID(ex Executor, assignmentID string) (*po.BasicComicAsgn, error)
+	GetAsgnsByComicID(ex Executor, comicID string, offset, limit int) ([]po.BasicComicAsgn, error)
+	GetAsgnsByUserID(ex Executor, userID string, offset, limit int) ([]po.BasicComicAsgn, error)
 
-	CreateAssignment(ex Executor, newAssign *po.NewComicAssignment) error
+	CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error
 
-	UpdateAssignmentByID(ex Executor, patchAssign *po.PatchComicAssignment) error
+	UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error
 }
 
-type comicAssignmentRepo struct {
+type comicAsgnRepo struct {
 	ex Executor
 }
 
-func NewComicAssignmentRepo(ex Executor) ComicAssignmentRepo {
-	return &comicAssignmentRepo{ex: ex}
+func NewComicAsgnRepo(ex Executor) ComicAsgnRepo {
+	return &comicAsgnRepo{ex: ex}
 }
 
-func (car *comicAssignmentRepo) Exec() Executor { return car.ex }
+func (car *comicAsgnRepo) Exec() Executor { return car.ex }
 
-func (car *comicAssignmentRepo) withTrx(tx Executor) Executor {
+func (car *comicAsgnRepo) withTrx(tx Executor) Executor {
 	if tx != nil {
 		return tx
 	}
@@ -38,16 +38,16 @@ func (car *comicAssignmentRepo) withTrx(tx Executor) Executor {
 	return car.ex
 }
 
-func (car *comicAssignmentRepo) CreateAssignment(ex Executor, newAssign *po.NewComicAssignment) error {
+func (car *comicAsgnRepo) CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error {
 	ex = car.withTrx(ex)
 
 	return ex.Create(newAssign).Error
 }
 
-func (car *comicAssignmentRepo) GetAssignmentByID(ex Executor, assignmentID string) (*po.BasicComicAssignment, error) {
+func (car *comicAsgnRepo) GetAsgnByID(ex Executor, assignmentID string) (*po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
-	a := &po.BasicComicAssignment{}
+	a := &po.BasicComicAsgn{}
 
 	if err := ex.
 		Where("id = ?", assignmentID).
@@ -59,13 +59,22 @@ func (car *comicAssignmentRepo) GetAssignmentByID(ex Executor, assignmentID stri
 	return a, nil
 }
 
-func (car *comicAssignmentRepo) GetAssignmentsByComicID(ex Executor, comicID string) ([]po.BasicComicAssignment, error) {
+func (car *comicAsgnRepo) GetAsgnsByComicID(ex Executor, comicID string, offset, limit int) ([]po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
-	var lst []po.BasicComicAssignment
+	var lst []po.BasicComicAsgn
 
-	if err := ex.
-		Where("comic_id = ?", comicID).
+	query := ex.Where("comic_id = ?", comicID)
+
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	if err := query.
 		Find(&lst).
 		Error; err != nil {
 		return nil, fmt.Errorf("Failed to get assignments by comic ID: %w", err)
@@ -74,13 +83,22 @@ func (car *comicAssignmentRepo) GetAssignmentsByComicID(ex Executor, comicID str
 	return lst, nil
 }
 
-func (car *comicAssignmentRepo) GetAssignmentsByUserID(ex Executor, userID string) ([]po.BasicComicAssignment, error) {
+func (car *comicAsgnRepo) GetAsgnsByUserID(ex Executor, userID string, offset, limit int) ([]po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
-	var lst []po.BasicComicAssignment
+	var lst []po.BasicComicAsgn
 
-	if err := ex.
-		Where("user_id = ?", userID).
+	q := ex.Where("user_id = ?", userID)
+
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+
+	if err := q.
 		Find(&lst).
 		Error; err != nil {
 		return nil, fmt.Errorf("Failed to get assignments by user ID: %w", err)
@@ -89,14 +107,14 @@ func (car *comicAssignmentRepo) GetAssignmentsByUserID(ex Executor, userID strin
 	return lst, nil
 }
 
-func (car *comicAssignmentRepo) UpdateAssignmentByID(ex Executor, patchAssign *po.PatchComicAssignment) error {
+func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error {
 	if patchAssign.ID == "" {
 		return errors.New("assignment ID is required for update")
 	}
 
 	ex = car.withTrx(ex)
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 
 	if patchAssign.ComicID != nil {
 		updates["comic_id"] = *patchAssign.ComicID
@@ -149,7 +167,7 @@ func (car *comicAssignmentRepo) UpdateAssignmentByID(ex Executor, patchAssign *p
 		return nil
 	}
 
-	return ex.Model(&po.PatchComicAssignment{}).
+	return ex.Model(&po.PatchComicAsgn{}).
 		Where("id = ?", patchAssign.ID).
 		Updates(updates).
 		Error

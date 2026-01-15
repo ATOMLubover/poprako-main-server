@@ -7,3 +7,6 @@
 
 # Output binaries.
 bin/
+
+# Mock.
+mocks/

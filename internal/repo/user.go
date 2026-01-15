@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/model/po"
 )
 
@@ -13,8 +14,7 @@ type UserRepo interface {
 
 	GetUserByID(ex Executor, userID string) (*po.BasicUser, error)
 	GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error)
-	// GetUsersByIDs(ex Executor, userIDs []string) ([]po.BasicUser, error)
-	// GetUsersByQQs(ex Executor, qqs []string) ([]po.BasicUser, error)
+	RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.BasicUser, error)
 
 	GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error)
 
@@ -88,40 +88,6 @@ func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
 	return ub, nil
 }
 
-// // Get a list of user basics by their IDs.
-// // A zero-length slice is returned if no users are found.
-// func (ur *userRepo) GetUsersByIDs(ex Executor, userIDs []string) ([]po.BasicUser, error) {
-// 	ex = ur.withTrx(ex)
-
-// 	var ubLst []po.BasicUser
-
-// 	if err := ex.
-// 		Where("id IN ?", userIDs).
-// 		Find(&ubLst).
-// 		Error; err != nil {
-// 		return nil, fmt.Errorf("Failed to get user basics by IDs: %w", err)
-// 	}
-
-// 	return ubLst, nil
-// }
-
-// // Get a list of user basics by their qqs.
-// // A zero-length slice is returned if no users are found.
-// func (ur *userRepo) GetUsersByQQs(ex Executor, qqs []string) ([]po.BasicUser, error) {
-// 	ex = ur.withTrx(ex)
-
-// 	var ubLst []po.BasicUser
-
-// 	if err := ex.
-// 		Where("qq = ANY(?)", qqs).
-// 		Find(&ubLst).
-// 		Error; err != nil {
-// 		return nil, fmt.Errorf("Failed to get user basics by QQs: %w", err)
-// 	}
-
-// 	return ubLst, nil
-// }
-
 func (ur *userRepo) GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error) {
 	ex = ur.withTrx(ex)
 
@@ -145,7 +111,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 
 	ex = ur.withTrx(ex)
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 
 	if patchUser.QQ != nil {
 		updates["qq"] = *patchUser.QQ
@@ -213,4 +179,86 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 		Where("id = ?", patchUser.ID).
 		Updates(updates).
 		Error
+}
+
+// RetrieveUsers returns a slice of BasicUser with filtering and pagination.
+// A zero-length slice is returned if no users are found.
+func (ur *userRepo) RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.BasicUser, error) {
+	ex = ur.withTrx(ex)
+
+	var users []po.BasicUser
+
+	query := ex
+
+	if opt.Nickname != nil {
+		query = query.Where("nickname LIKE ?", "%"+*opt.Nickname+"%")
+	}
+
+	if opt.IsAdmin != nil {
+		query = query.Where("is_admin = ?", *opt.IsAdmin)
+	}
+
+	if opt.IsTranslator != nil {
+		if *opt.IsTranslator {
+			query = query.Where("assigned_translator_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_translator_at IS NULL")
+		}
+	}
+
+	if opt.IsProofreader != nil {
+		if *opt.IsProofreader {
+			query = query.Where("assigned_proofreader_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_proofreader_at IS NULL")
+		}
+	}
+
+	if opt.IsTypesetter != nil {
+		if *opt.IsTypesetter {
+			query = query.Where("assigned_typesetter_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_typesetter_at IS NULL")
+		}
+	}
+
+	if opt.IsRedrawer != nil {
+		if *opt.IsRedrawer {
+			query = query.Where("assigned_redrawer_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_redrawer_at IS NULL")
+		}
+	}
+
+	if opt.IsReviewer != nil {
+		if *opt.IsReviewer {
+			query = query.Where("assigned_reviewer_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_reviewer_at IS NULL")
+		}
+	}
+
+	if opt.IsUploader != nil {
+		if *opt.IsUploader {
+			query = query.Where("assigned_uploader_at IS NOT NULL")
+		} else {
+			query = query.Where("assigned_uploader_at IS NULL")
+		}
+	}
+
+	if opt.Offset > 0 {
+		query = query.Offset(opt.Offset)
+	}
+
+	if opt.Limit > 0 {
+		query = query.Limit(opt.Limit)
+	}
+
+	if err := query.
+		Find(&users).
+		Error; err != nil {
+		return nil, fmt.Errorf("Failed to retrieve users: %w", err)
+	}
+
+	return users, nil
 }

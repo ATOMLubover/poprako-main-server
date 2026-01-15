@@ -18,7 +18,7 @@ type LoginArgs struct {
 	QQ       string `json:"qq"`
 	Password string `json:"password"`
 	Nickname string `json:"nickname,omitempty"`
-	InvCode  string `json:"inv_code,omitempty"`
+	InvCode  string `json:"invitation_code,omitempty"`
 }
 
 type LoginReply struct {
@@ -26,16 +26,16 @@ type LoginReply struct {
 }
 
 type UpdateUserArgs struct {
-	UserID            string  `json:"user_id"`
-	QQ                *string `json:"qq,omitempty"`
-	Nickname          *string `json:"nickname,omitempty"`
-	IsAdmin           *bool   `json:"is_admin,omitempty"`
-	AssignTranslator  *bool   `json:"assign_translator,omitempty"`
-	AssignProofreader *bool   `json:"assign_proofreader,omitempty"`
-	AssignTypesetter  *bool   `json:"assign_typesetter,omitempty"`
-	AssignRedrawer    *bool   `json:"assign_redrawer,omitempty"`
-	AssignReviewer    *bool   `json:"assign_reviewer,omitempty"`
-	AssignUploader    *bool   `json:"assign_uploader,omitempty"`
+	UserID   string  `json:"user_id"`
+	QQ       *string `json:"qq,omitempty"`
+	Nickname *string `json:"nickname,omitempty"`
+	// IsAdmin           *bool   `json:"is_admin,omitempty"`
+	// AssignTranslator  *bool   `json:"assign_translator,omitempty"`
+	// AssignProofreader *bool   `json:"assign_proofreader,omitempty"`
+	// AssignTypesetter  *bool   `json:"assign_typesetter,omitempty"`
+	// AssignRedrawer    *bool   `json:"assign_redrawer,omitempty"`
+	// AssignReviewer    *bool   `json:"assign_reviewer,omitempty"`
+	// AssignUploader    *bool   `json:"assign_uploader,omitempty"`
 }
 
 type InviteUserArgs struct {
@@ -44,4 +44,30 @@ type InviteUserArgs struct {
 
 type InviteUserReply struct {
 	InvCode string `json:"invitation_code"`
+}
+
+type RetrieveUserOpt struct {
+	Nickname *string `url:"nn,omitempty"` // Fuzzy
+
+	IsAdmin *bool `url:"ia,omitempty"`
+
+	IsTranslator  *bool `url:"itsl,omitempty"`
+	IsProofreader *bool `url:"ipr,omitempty"`
+	IsTypesetter  *bool `url:"itst,omitempty"`
+	IsRedrawer    *bool `url:"ird,omitempty"`
+	IsReviewer    *bool `url:"irv,omitempty"`
+	IsUploader    *bool `url:"iul,omitempty"`
+
+	Offset int `url:"offset"`
+	Limit  int `url:"limit"`
+}
+
+type RoleAssignment struct {
+	Role     string `json:"role"`
+	Assigned bool   `json:"assigned"`
+}
+
+type AssignUserRoleArgs struct {
+	UserID string           `json:"user_id"`
+	Roles  []RoleAssignment `json:"roles"`
 }

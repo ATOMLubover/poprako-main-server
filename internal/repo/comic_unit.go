@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 
 	"poprako-main-server/internal/model/po"
@@ -11,13 +10,13 @@ import (
 type ComicUnitRepo interface {
 	Repo
 
-	GetUnitByID(ex Executor, unitID string) (*po.BasicComicUnit, error)
 	GetUnitsByPageID(ex Executor, pageID string) ([]po.BasicComicUnit, error)
-	GetUnitsByIDs(ex Executor, unitIDs []string) ([]po.BasicComicUnit, error)
 
-	CreateUnit(ex Executor, newUnit *po.NewComicUnit) error
+	CreateUnits(ex Executor, newUnits []po.NewComicUnit) error
 
-	UpdateUnitByID(ex Executor, patchUnit *po.PatchComicUnit) error
+	UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchComicUnit) error
+
+	DeleteUnitByIDs(ex Executor, unitIDs []string) error
 }
 
 type comicUnitRepo struct {
@@ -38,25 +37,14 @@ func (cur *comicUnitRepo) withTrx(tx Executor) Executor {
 	return cur.ex
 }
 
-func (cur *comicUnitRepo) CreateUnit(ex Executor, newUnit *po.NewComicUnit) error {
-	ex = cur.withTrx(ex)
-
-	return ex.Create(newUnit).Error
-}
-
-func (cur *comicUnitRepo) GetUnitByID(ex Executor, unitID string) (*po.BasicComicUnit, error) {
-	ex = cur.withTrx(ex)
-
-	u := &po.BasicComicUnit{}
-
-	if err := ex.
-		Where("id = ?", unitID).
-		First(u).
-		Error; err != nil {
-		return nil, fmt.Errorf("Failed to get unit by ID: %w", err)
+func (cur *comicUnitRepo) CreateUnits(ex Executor, newUnits []po.NewComicUnit) error {
+	if len(newUnits) == 0 {
+		return nil
 	}
 
-	return u, nil
+	ex = cur.withTrx(ex)
+
+	return ex.Create(newUnits).Error
 }
 
 func (cur *comicUnitRepo) GetUnitsByPageID(ex Executor, pageID string) ([]po.BasicComicUnit, error) {
@@ -74,27 +62,79 @@ func (cur *comicUnitRepo) GetUnitsByPageID(ex Executor, pageID string) ([]po.Bas
 	return lst, nil
 }
 
-func (cur *comicUnitRepo) GetUnitsByIDs(ex Executor, unitIDs []string) ([]po.BasicComicUnit, error) {
-	ex = cur.withTrx(ex)
-
-	var lst []po.BasicComicUnit
-
-	if err := ex.
-		Where("id IN ?", unitIDs).
-		Find(&lst).
-		Error; err != nil {
-		return nil, fmt.Errorf("Failed to get units by IDs: %w", err)
+func (cur *comicUnitRepo) UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchComicUnit) error {
+	if len(patchUnits) == 0 {
+		return nil
 	}
 
-	return lst, nil
+	ex = cur.withTrx(ex)
+
+	// Update each unit individually to handle optional fields correctly
+	for _, patchUnit := range patchUnits {
+		if patchUnit.ID == "" {
+			continue
+		}
+
+		updates := map[string]any{}
+
+		if patchUnit.Index != nil {
+			updates["index"] = *patchUnit.Index
+		}
+		if patchUnit.XCoordinate != nil {
+			updates["x_coordinate"] = *patchUnit.XCoordinate
+		}
+		if patchUnit.YCoordinate != nil {
+			updates["y_coordinate"] = *patchUnit.YCoordinate
+		}
+		if patchUnit.IsInBox != nil {
+			updates["is_in_box"] = *patchUnit.IsInBox
+		}
+		if patchUnit.TranslatedText != nil {
+			updates["translated_text"] = *patchUnit.TranslatedText
+		}
+		if patchUnit.TranslatorID != nil {
+			updates["translator_id"] = *patchUnit.TranslatorID
+		}
+		if patchUnit.TranslatorComment != nil {
+			updates["translator_comment"] = *patchUnit.TranslatorComment
+		}
+		if patchUnit.ProvedText != nil {
+			updates["proved_text"] = *patchUnit.ProvedText
+		}
+		if patchUnit.Proved != nil {
+			updates["proved"] = *patchUnit.Proved
+		}
+		if patchUnit.ProofreaderID != nil {
+			updates["proofreader_id"] = *patchUnit.ProofreaderID
+		}
+		if patchUnit.ProofreaderComment != nil {
+			updates["proofreader_comment"] = *patchUnit.ProofreaderComment
+		}
+		if patchUnit.CreatorID != nil {
+			updates["creator_id"] = *patchUnit.CreatorID
+		}
+
+		if len(updates) == 0 {
+			continue
+		}
+
+		if err := ex.Model(&po.PatchComicUnit{}).
+			Where("id = ?", patchUnit.ID).
+			Updates(updates).
+			Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (cur *comicUnitRepo) UpdateUnitByID(ex Executor, patchUnit *po.PatchComicUnit) error {
-	if patchUnit.ID == "" {
-		return errors.New("unit ID is required for update")
+func (cur *comicUnitRepo) DeleteUnitByIDs(ex Executor, unitIDs []string) error {
+	if len(unitIDs) == 0 {
+		return nil
 	}
 
 	ex = cur.withTrx(ex)
 
-	return ex.Save(patchUnit).Error
+	return ex.Where("id IN ?", unitIDs).Delete(&po.BasicComicUnit{}).Error
 }
