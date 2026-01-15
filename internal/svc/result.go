@@ -40,6 +40,8 @@ const (
 	PWD_HASH_FAILURE SvcErr = "Password hashing failure"
 	// User not found.
 	USER_NOT_FOUND SvcErr = "User not found"
+	// Resource not found.
+	NOT_FOUND SvcErr = "Resource not found"
 	// Password mismatch.
 	PWD_MISMATCH SvcErr = "Password mismatch"
 	// Invalid invitation code.
@@ -58,6 +60,8 @@ const (
 	INVALID_PAGE_DATA SvcErr = "Invalid comic page data"
 	// Invalid role data.
 	INVALID_ROLE_DATA SvcErr = "Invalid role data"
+	// Duplicate information (e.g., duplicate QQ).
+	// DUPLICATE_INFO SvcErr = "Duplicate information"
 )
 
 // Get a API error code for the ServError.
@@ -66,12 +70,14 @@ func (e *SvcErr) Code() uint16 {
 	case NO_ERROR:
 		return 200
 	case DB_FAILURE:
-		return 500
+		return 400 // Considered as bad request
 	case USER_FETCH_FAILURE:
 		return 400 // Considered as bad request
 	case PWD_HASH_FAILURE:
 		return 500
 	case USER_NOT_FOUND:
+		return 404
+	case NOT_FOUND:
 		return 404
 	case PWD_MISMATCH:
 		return 401
@@ -91,6 +97,8 @@ func (e *SvcErr) Code() uint16 {
 		return 400
 	case INVALID_ROLE_DATA:
 		return 400
+	// case DUPLICATE_INFO:
+	// 	return 400
 	default:
 		return 500
 	}
@@ -104,13 +112,15 @@ func (e *SvcErr) Msg() string {
 	case NO_ERROR:
 		return ""
 	case DB_FAILURE:
-		return "服务器内部错误"
+		return "非法的数据"
 	case PWD_HASH_FAILURE:
 		return "服务器内部错误"
 	case USER_FETCH_FAILURE:
 		return "获取用户信息失败"
 	case USER_NOT_FOUND:
 		return "用户不存在"
+	case NOT_FOUND:
+		return "资源不存在"
 	case PWD_MISMATCH:
 		return "密码错误"
 	case INV_CODE_INVALID:
@@ -129,6 +139,8 @@ func (e *SvcErr) Msg() string {
 		return "无效的页面数据"
 	case INVALID_ROLE_DATA:
 		return "无效的任命数据"
+	// case DUPLICATE_INFO:
+	// 	return "信息已被占用"
 	default:
 		return "服务器内部错误"
 	}

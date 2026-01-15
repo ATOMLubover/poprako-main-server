@@ -2,6 +2,8 @@ CREATE TABLE "workset_tbl" (
     "id" TEXT PRIMARY KEY NOT NULL,
     
     "index" INTEGER UNIQUE NOT NULL,
+
+    "name" TEXT NOT NULL,
     "comic_count" INTEGER DEFAULT 0 NOT NULL,
     
     "description" TEXT,

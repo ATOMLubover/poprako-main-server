@@ -9,6 +9,11 @@ import (
 )
 
 type AppCfg struct {
+	NativeAppVersion string `mapstructure:"native_app_version"`
+	CheckUpdateTitle string `mapstructure:"check_update_title"`
+	CheckUpdateDesc  string `mapstructure:"check_update_desc"`
+	CheckUpdateMin   string `mapstructure:"check_update_min"`
+
 	Host string `mapstructure:"host"`
 	Port uint16 `mapstructure:"port"`
 

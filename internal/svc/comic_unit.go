@@ -58,8 +58,8 @@ func (cus *comicUnitSvc) GetUnitsByPageID(pageID string) (SvcRslt[[]model.ComicU
 			ProofreaderID:      u.ProofreaderID,
 			ProofreaderComment: u.ProofreaderComment,
 			CreatorID:          u.CreatorID,
-			CreatedAt:          u.CreatedAt,
-			UpdatedAt:          u.UpdatedAt,
+			CreatedAt:          u.CreatedAt.Unix(),
+			UpdatedAt:          u.UpdatedAt.Unix(),
 		})
 	}
 

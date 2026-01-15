@@ -124,7 +124,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedTranslatorAt != nil {
-		if *patchUser.AssignedTranslatorAt == 0 {
+		if patchUser.AssignedTranslatorAt.IsZero() {
 			updates["assigned_translator_at"] = nil
 		} else {
 			updates["assigned_translator_at"] = *patchUser.AssignedTranslatorAt
@@ -132,7 +132,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedProofreaderAt != nil {
-		if *patchUser.AssignedProofreaderAt == 0 {
+		if patchUser.AssignedProofreaderAt.IsZero() {
 			updates["assigned_proofreader_at"] = nil
 		} else {
 			updates["assigned_proofreader_at"] = *patchUser.AssignedProofreaderAt
@@ -140,7 +140,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedTypesetterAt != nil {
-		if *patchUser.AssignedTypesetterAt == 0 {
+		if patchUser.AssignedTypesetterAt.IsZero() {
 			updates["assigned_typesetter_at"] = nil
 		} else {
 			updates["assigned_typesetter_at"] = *patchUser.AssignedTypesetterAt
@@ -148,7 +148,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedRedrawerAt != nil {
-		if *patchUser.AssignedRedrawerAt == 0 {
+		if patchUser.AssignedRedrawerAt.IsZero() {
 			updates["assigned_redrawer_at"] = nil
 		} else {
 			updates["assigned_redrawer_at"] = *patchUser.AssignedRedrawerAt
@@ -156,7 +156,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedReviewerAt != nil {
-		if *patchUser.AssignedReviewerAt == 0 {
+		if patchUser.AssignedReviewerAt.IsZero() {
 			updates["assigned_reviewer_at"] = nil
 		} else {
 			updates["assigned_reviewer_at"] = *patchUser.AssignedReviewerAt
@@ -164,7 +164,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 	}
 
 	if patchUser.AssignedUploaderAt != nil {
-		if *patchUser.AssignedUploaderAt == 0 {
+		if patchUser.AssignedUploaderAt.IsZero() {
 			updates["assigned_uploader_at"] = nil
 		} else {
 			updates["assigned_uploader_at"] = *patchUser.AssignedUploaderAt

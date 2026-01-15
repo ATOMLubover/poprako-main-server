@@ -1,5 +1,7 @@
 package po
 
+import "time"
+
 const (
 	WORKSET_TABLE = "workset_tbl"
 )
@@ -21,8 +23,8 @@ type DetailedWorkset struct {
 	Description     *string `gorm:"description"`
 	CreatorID       string  `gorm:"creator_id"`
 	CreatorNickname string
-	CreatedAt       int64 `gorm:"created_at"`
-	UpdatedAt       int64 `gorm:"updated_at"`
+	CreatedAt       time.Time `gorm:"created_at"`
+	UpdatedAt       time.Time `gorm:"updated_at"`
 }
 
 type PatchWorkset struct {

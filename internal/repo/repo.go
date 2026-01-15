@@ -14,13 +14,13 @@ func InitDB() Executor {
 	dbURL := os.Getenv("DATABASE_URL")
 
 	if dbURL == "" {
-		panic(DB_URL_NOT_SET)
+		panic(DB_URL_NOT_SET.Error())
 	}
 
 	exec, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 	if err != nil {
 		zap.L().Error("Database connection failure", zap.Error(err))
-		panic(DB_CONNECTION_FAILURE)
+		panic(DB_CONNECTION_FAILURE.Error())
 	}
 
 	zap.L().Info("Connected to database successfully")

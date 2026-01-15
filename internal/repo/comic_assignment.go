@@ -18,6 +18,8 @@ type ComicAsgnRepo interface {
 	CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error
 
 	UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error
+
+	DeleteAsgnByID(ex Executor, assignmentID string) error
 }
 
 type comicAsgnRepo struct {
@@ -124,7 +126,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 	}
 
 	if patchAssign.AssignedTranslatorAt != nil {
-		if *patchAssign.AssignedTranslatorAt == 0 {
+		if patchAssign.AssignedTranslatorAt.IsZero() {
 			updates["assigned_translator_at"] = nil
 		} else {
 			updates["assigned_translator_at"] = *patchAssign.AssignedTranslatorAt
@@ -132,7 +134,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 	}
 
 	if patchAssign.AssignedProofreaderAt != nil {
-		if *patchAssign.AssignedProofreaderAt == 0 {
+		if patchAssign.AssignedProofreaderAt.IsZero() {
 			updates["assigned_proofreader_at"] = nil
 		} else {
 			updates["assigned_proofreader_at"] = *patchAssign.AssignedProofreaderAt
@@ -140,7 +142,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 	}
 
 	if patchAssign.AssignedTypesetterAt != nil {
-		if *patchAssign.AssignedTypesetterAt == 0 {
+		if patchAssign.AssignedTypesetterAt.IsZero() {
 			updates["assigned_typesetter_at"] = nil
 		} else {
 			updates["assigned_typesetter_at"] = *patchAssign.AssignedTypesetterAt
@@ -148,7 +150,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 	}
 
 	if patchAssign.AssignedRedrawerAt != nil {
-		if *patchAssign.AssignedRedrawerAt == 0 {
+		if patchAssign.AssignedRedrawerAt.IsZero() {
 			updates["assigned_redrawer_at"] = nil
 		} else {
 			updates["assigned_redrawer_at"] = *patchAssign.AssignedRedrawerAt
@@ -156,7 +158,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 	}
 
 	if patchAssign.AssignedReviewerAt != nil {
-		if *patchAssign.AssignedReviewerAt == 0 {
+		if patchAssign.AssignedReviewerAt.IsZero() {
 			updates["assigned_reviewer_at"] = nil
 		} else {
 			updates["assigned_reviewer_at"] = *patchAssign.AssignedReviewerAt
@@ -171,4 +173,19 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 		Where("id = ?", patchAssign.ID).
 		Updates(updates).
 		Error
+}
+
+func (car *comicAsgnRepo) DeleteAsgnByID(ex Executor, assignmentID string) error {
+	ex = car.withTrx(ex)
+
+	result := ex.Where("id = ?", assignmentID).Delete(&po.BasicComicAsgn{})
+	if result.Error != nil {
+		return fmt.Errorf("Failed to delete assignment: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return REC_NOT_FOUND
+	}
+
+	return nil
 }

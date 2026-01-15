@@ -47,7 +47,7 @@ func NewR2Client() OSSClient {
 		panic("R2_BUCKET_NAME environment variable is not set")
 	}
 
-	customDomain := os.Getenv("R2_CUSTOM_DEMAIN")
+	customDomain := os.Getenv("R2_CUSTOM_DOMAIN")
 	if customDomain == "" {
 		customDomain = accountID + ".r2.cloudflarestorage.com"
 	}
@@ -81,8 +81,11 @@ func NewR2Client() OSSClient {
 }
 
 func (r2 *r2Client) PresignPut(ossKey string) (string, error) {
-	const exp = 10 * 60 * time.Minute // 10 minutes
+	const exp = 10 * time.Minute // 10 minutes
 
+	// Determine content type based on file extension
+	// For presigned URLs, we should NOT set ContentType here as it would require
+	// the client to match it exactly. Let the client set it.
 	req, err := r2.presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(r2.bucketName),
 		Key:    aws.String(ossKey),

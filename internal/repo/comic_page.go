@@ -17,6 +17,8 @@ type ComicPageRepo interface {
 	CreatePages(newPages []po.NewComicPage) error
 
 	UpdatePageByID(ex Executor, patchPage *po.PatchComicPage) error
+
+	DeletePageByID(ex Executor, pageID string) error
 }
 
 type comicPageRepo struct {
@@ -113,9 +115,6 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 	if patchPage.OSSKey != nil {
 		updates["oss_key"] = *patchPage.OSSKey
 	}
-	if patchPage.SizeBytes != nil {
-		updates["size_bytes"] = *patchPage.SizeBytes
-	}
 	if patchPage.Uploaded != nil {
 		updates["uploaded"] = *patchPage.Uploaded
 	}
@@ -128,4 +127,32 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 		Where("id = ?", patchPage.ID).
 		Updates(updates).
 		Error
+}
+
+func (cpr *comicPageRepo) DeletePageByID(ex Executor, pageID string) error {
+	return cpr.Exec().Transaction(func(tx Executor) error {
+		// Get page first to get comic_id
+		page := &po.BasicComicPage{}
+		if err := tx.Where("id = ?", pageID).First(page).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return REC_NOT_FOUND
+			}
+			return err
+		}
+
+		// Delete the page
+		if err := tx.Where("id = ?", pageID).Delete(&po.BasicComicPage{}).Error; err != nil {
+			return err
+		}
+
+		// Update comic page_count
+		if err := tx.Model(&po.BasicComic{}).
+			Where("id = ?", page.ComicID).
+			UpdateColumn("page_count", gorm.Expr("page_count - ?", 1)).
+			Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

@@ -1,5 +1,7 @@
 package po
 
+import "time"
+
 const (
 	COMIC_TABLE = "comic_tbl"
 )
@@ -26,14 +28,14 @@ type BriefComic struct {
 	Author string `gorm:"author"`
 	Title  string `gorm:"title"`
 
-	TranslatingStartedAt    *int64 `gorm:"translating_started_at"`
-	TranslatingCompletedAt  *int64 `gorm:"translating_completed_at"`
-	ProofreadingStartedAt   *int64 `gorm:"proofreading_started_at"`
-	ProofreadingCompletedAt *int64 `gorm:"proofreading_completed_at"`
-	TypesettingStartedAt    *int64 `gorm:"typesetting_started_at"`
-	TypesettingCompletedAt  *int64 `gorm:"typesetting_completed_at"`
-	ReviewingCompletedAt    *int64 `gorm:"reviewing_completed_at"`
-	UploadingCompletedAt    *int64 `gorm:"uploading_completed_at"`
+	TranslatingStartedAt    *time.Time `gorm:"translating_started_at"`
+	TranslatingCompletedAt  *time.Time `gorm:"translating_completed_at"`
+	ProofreadingStartedAt   *time.Time `gorm:"proofreading_started_at"`
+	ProofreadingCompletedAt *time.Time `gorm:"proofreading_completed_at"`
+	TypesettingStartedAt    *time.Time `gorm:"typesetting_started_at"`
+	TypesettingCompletedAt  *time.Time `gorm:"typesetting_completed_at"`
+	ReviewingCompletedAt    *time.Time `gorm:"reviewing_completed_at"`
+	UploadingCompletedAt    *time.Time `gorm:"uploading_completed_at"`
 }
 
 type BasicComic struct {
@@ -54,17 +56,17 @@ type BasicComic struct {
 	PageCount  int64 `gorm:"page_count"`
 	LikesCount int64 `gorm:"likes_count"`
 
-	TranslatingStartedAt    *int64 `gorm:"translating_started_at"`
-	TranslatingCompletedAt  *int64 `gorm:"translating_completed_at"`
-	ProofreadingStartedAt   *int64 `gorm:"proofreading_started_at"`
-	ProofreadingCompletedAt *int64 `gorm:"proofreading_completed_at"`
-	TypesettingStartedAt    *int64 `gorm:"typesetting_started_at"`
-	TypesettingCompletedAt  *int64 `gorm:"typesetting_completed_at"`
-	ReviewingCompletedAt    *int64 `gorm:"reviewing_completed_at"`
-	UploadingCompletedAt    *int64 `gorm:"uploading_completed_at"`
+	TranslatingStartedAt    *time.Time `gorm:"translating_started_at"`
+	TranslatingCompletedAt  *time.Time `gorm:"translating_completed_at"`
+	ProofreadingStartedAt   *time.Time `gorm:"proofreading_started_at"`
+	ProofreadingCompletedAt *time.Time `gorm:"proofreading_completed_at"`
+	TypesettingStartedAt    *time.Time `gorm:"typesetting_started_at"`
+	TypesettingCompletedAt  *time.Time `gorm:"typesetting_completed_at"`
+	ReviewingCompletedAt    *time.Time `gorm:"reviewing_completed_at"`
+	UploadingCompletedAt    *time.Time `gorm:"uploading_completed_at"`
 
-	CreatedAt int64 `gorm:"created_at"`
-	UpdatedAt int64 `gorm:"updated_at"`
+	CreatedAt time.Time `gorm:"created_at"`
+	UpdatedAt time.Time `gorm:"updated_at"`
 }
 
 type PatchComic struct {
@@ -81,14 +83,14 @@ type PatchComic struct {
 	PageCount  *int64 `gorm:"page_count"`
 	LikesCount *int64 `gorm:"likes_count"`
 
-	TranslatingStartedAt    *int64 `gorm:"translating_started_at"`
-	TranslatingCompletedAt  *int64 `gorm:"translating_completed_at"`
-	ProofreadingStartedAt   *int64 `gorm:"proofreading_started_at"`
-	ProofreadingCompletedAt *int64 `gorm:"proofreading_completed_at"`
-	TypesettingStartedAt    *int64 `gorm:"typesetting_started_at"`
-	TypesettingCompletedAt  *int64 `gorm:"typesetting_completed_at"`
-	ReviewingCompletedAt    *int64 `gorm:"reviewing_completed_at"`
-	UploadingCompletedAt    *int64 `gorm:"uploading_completed_at"`
+	TranslatingStartedAt    *time.Time `gorm:"translating_started_at"`
+	TranslatingCompletedAt  *time.Time `gorm:"translating_completed_at"`
+	ProofreadingStartedAt   *time.Time `gorm:"proofreading_started_at"`
+	ProofreadingCompletedAt *time.Time `gorm:"proofreading_completed_at"`
+	TypesettingStartedAt    *time.Time `gorm:"typesetting_started_at"`
+	TypesettingCompletedAt  *time.Time `gorm:"typesetting_completed_at"`
+	ReviewingCompletedAt    *time.Time `gorm:"reviewing_completed_at"`
+	UploadingCompletedAt    *time.Time `gorm:"uploading_completed_at"`
 }
 
 func (*NewComic) TableName() string { return COMIC_TABLE }

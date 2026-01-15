@@ -4,12 +4,12 @@ type UserInfo struct {
 	UserID                string `json:"user_id"`
 	QQ                    string `json:"qq"`
 	Nickname              string `json:"nickname"`
-	AssignedTranslatorAt  int64  `json:"assigned_translator_at"`
-	AssignedProofreaderAt int64  `json:"assigned_proofreader_at"`
-	AssignedTypesetterAt  int64  `json:"assigned_typesetter_at"`
-	AssignedRedrawerAt    int64  `json:"assigned_redrawer_at"`
-	AssignedReviewerAt    int64  `json:"assigned_reviewer_at"`
-	AssignedUploaderAt    int64  `json:"assigned_uploader_at"`
+	AssignedTranslatorAt  *int64 `json:"assigned_translator_at"`
+	AssignedProofreaderAt *int64 `json:"assigned_proofreader_at"`
+	AssignedTypesetterAt  *int64 `json:"assigned_typesetter_at"`
+	AssignedRedrawerAt    *int64 `json:"assigned_redrawer_at"`
+	AssignedReviewerAt    *int64 `json:"assigned_reviewer_at"`
+	AssignedUploaderAt    *int64 `json:"assigned_uploader_at"`
 	IsAdmin               bool   `json:"is_admin"`
 	CreatedAt             int64  `json:"created_at"`
 }

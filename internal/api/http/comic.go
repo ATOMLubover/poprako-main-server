@@ -124,3 +124,21 @@ func UpdateComicByID(appState *state.AppState) iris.Handler {
 		ctx.StatusCode(iris.StatusNoContent)
 	}
 }
+
+func DeleteComicByID(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		comicID := ctx.Params().Get("comic_id")
+		if comicID == "" {
+			reject(ctx, iris.StatusBadRequest, "缺少 comic_id 路径参数")
+			return
+		}
+
+		err := appState.ComicSvc.DeleteComicByID(comicID)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}

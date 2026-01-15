@@ -17,6 +17,8 @@ type WorksetRepo interface {
 	CreateWorkset(ex Executor, newWorkset *po.NewWorkset) error
 
 	UpdateWorksetByID(ex Executor, patchWorkset *po.PatchWorkset) error
+
+	DeleteWorksetByID(ex Executor, worksetID string) error
 }
 
 type worksetRepo struct {
@@ -135,4 +137,19 @@ func (wr *worksetRepo) RetrieveWorksets(ex Executor, limit, offset int) ([]po.De
 	}
 
 	return lst, nil
+}
+
+func (wr *worksetRepo) DeleteWorksetByID(ex Executor, worksetID string) error {
+	ex = wr.withTrx(ex)
+
+	result := ex.Where("id = ?", worksetID).Delete(&po.DetailedWorkset{})
+	if result.Error != nil {
+		return fmt.Errorf("Failed to delete workset: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return REC_NOT_FOUND
+	}
+
+	return nil
 }

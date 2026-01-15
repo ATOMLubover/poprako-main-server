@@ -1,5 +1,7 @@
 package po
 
+import "time"
+
 const (
 	COMIC_UNIT_TABLE = "comic_unit_tbl"
 )
@@ -43,8 +45,8 @@ type BasicComicUnit struct {
 
 	CreatorID *string `gorm:"creator_id"`
 
-	CreatedAt int64 `gorm:"created_at"`
-	UpdatedAt int64 `gorm:"updated_at"`
+	CreatedAt time.Time `gorm:"created_at"`
+	UpdatedAt time.Time `gorm:"updated_at"`
 }
 
 type PatchComicUnit struct {

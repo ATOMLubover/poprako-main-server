@@ -1,0 +1,129 @@
+PS D:\my_projects\poprako-main-server\tests> go test -v
+✓ Server started successfully
+=== RUN   TestIntegrationFlow
+=== RUN   TestIntegrationFlow/01_UserManagement
+    integration_test.go:251: ✓ Invited user 1/10: QQ 1000001 (invitation code: f4241)
+    integration_test.go:251: ✓ Invited user 2/10: QQ 1000002 (invitation code: f4242)
+    integration_test.go:251: ✓ Invited user 3/10: QQ 1000003 (invitation code: f4243)
+    integration_test.go:251: ✓ Invited user 4/10: QQ 1000004 (invitation code: f4244)
+    integration_test.go:251: ✓ Invited user 5/10: QQ 1000005 (invitation code: f4245)
+    integration_test.go:251: ✓ Invited user 6/10: QQ 1000006 (invitation code: f4246)
+    integration_test.go:251: ✓ Invited user 7/10: QQ 1000007 (invitation code: f4247)
+    integration_test.go:251: ✓ Invited user 8/10: QQ 1000008 (invitation code: f4248)
+    integration_test.go:251: ✓ Invited user 9/10: QQ 1000009 (invitation code: f4249)
+    integration_test.go:251: ✓ Invited user 10/10: QQ 1000010 (invitation code: f424a)
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000001
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000002
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000003
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000004
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000005
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000006
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000007
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000008
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000009
+    integration_test.go:278: ✓ User registered/logged in: QQ 1000010
+    integration_test.go:291: DEBUG: GET /users raw response: {"code":200,"data":[{"user_id":"019bbf6f-fa6b-7119-b1cd-c961a808c864","qq":"3384539248","nickname":"TestAdmin","assigned_translator_at":1768468872,"assigned_proofreader_at":1768468872,"assigned_typesetter_at":1768468872,"assigned_redrawer_at":1768468872,"assigned_reviewer_at":1768468872,"assigned_uploader_at":1768468872,"is_admin":true,"created_at":1768468872},{"user_id":"019bc0ff-71be-711d-a4f6-bece28ca744e","qq":"1000001","nickname":"TestUser01","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469524},{"user_id":"019bc0ff-71fb-70c8-a3f7-9f479aca7485","qq":"1000002","nickname":"TestUser02","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469524},{"user_id":"019bc0ff-7232-7961-a10c-d7b81cf81187","qq":"1000003","nickname":"TestUser03","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-7268-7dce-ad1a-48abb9a1dc8e","qq":"1000004","nickname":"TestUser04","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-729f-74ca-9973-8ff1cda66931","qq":"1000005","nickname":"TestUser05","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-72d3-7e94-b362-0427662dd59b","qq":"1000006","nickname":"TestUser06","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-7307-7774-87a9-e3ce9d69c7df","qq":"1000007","nickname":"TestUser07","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-7339-7195-b3f5-e0e6304e0bd3","qq":"1000008","nickname":"TestUser08","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-736a-7ee9-a02c-478dea7552da","qq":"1000009","nickname":"TestUser09","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525},{"user_id":"019bc0ff-7399-7509-96e2-6e4e4cdd2f54","qq":"1000010","nickname":"TestUser10","assigned_translator_at":null,"assigned_proofreader_at":null,"assigned_typesetter_at":null,"assigned_redrawer_at":null,"assigned_reviewer_at":null,"assigned_uploader_at":null,"is_admin":false,"created_at":1768469525}]}
+    integration_test.go:299: DEBUG: Parsed 11 users from response
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:1.768468872e+09 assigned_redrawer_at:1.768468872e+09 assigned_reviewer_at:1.768468872e+09 assigned_translator_at:1.768468872e+09 assigned_typesetter_at:1.768468872e+09 assigned_uploader_at:1.768468872e+09 created_at:1.768468872e+09 is_admin:true nickname:TestAdmin qq:3384539248 user_id:019bbf6f-fa6b-7119-b1cd-c961a808c864]       
+    integration_test.go:308: DEBUG: Found QQ 3384539248 -> UserID 019bbf6f-fa6b-7119-b1cd-c961a808c864 
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469524e+09 is_admin:false nickname:TestUser01 qq:1000001 user_id:019bc0ff-71be-711d-a4f6-bece28ca744e]
+    integration_test.go:308: DEBUG: Found QQ 1000001 -> UserID 019bc0ff-71be-711d-a4f6-bece28ca744e    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469524e+09 is_admin:false nickname:TestUser02 qq:1000002 user_id:019bc0ff-71fb-70c8-a3f7-9f479aca7485]
+    integration_test.go:308: DEBUG: Found QQ 1000002 -> UserID 019bc0ff-71fb-70c8-a3f7-9f479aca7485    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser03 qq:1000003 user_id:019bc0ff-7232-7961-a10c-d7b81cf81187]
+    integration_test.go:308: DEBUG: Found QQ 1000003 -> UserID 019bc0ff-7232-7961-a10c-d7b81cf81187    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser04 qq:1000004 user_id:019bc0ff-7268-7dce-ad1a-48abb9a1dc8e]
+    integration_test.go:308: DEBUG: Found QQ 1000004 -> UserID 019bc0ff-7268-7dce-ad1a-48abb9a1dc8e    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser05 qq:1000005 user_id:019bc0ff-729f-74ca-9973-8ff1cda66931]
+    integration_test.go:308: DEBUG: Found QQ 1000005 -> UserID 019bc0ff-729f-74ca-9973-8ff1cda66931    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser06 qq:1000006 user_id:019bc0ff-72d3-7e94-b362-0427662dd59b]
+    integration_test.go:308: DEBUG: Found QQ 1000006 -> UserID 019bc0ff-72d3-7e94-b362-0427662dd59b    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser07 qq:1000007 user_id:019bc0ff-7307-7774-87a9-e3ce9d69c7df]
+    integration_test.go:308: DEBUG: Found QQ 1000007 -> UserID 019bc0ff-7307-7774-87a9-e3ce9d69c7df    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser08 qq:1000008 user_id:019bc0ff-7339-7195-b3f5-e0e6304e0bd3]
+    integration_test.go:308: DEBUG: Found QQ 1000008 -> UserID 019bc0ff-7339-7195-b3f5-e0e6304e0bd3    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser09 qq:1000009 user_id:019bc0ff-736a-7ee9-a02c-478dea7552da]
+    integration_test.go:308: DEBUG: Found QQ 1000009 -> UserID 019bc0ff-736a-7ee9-a02c-478dea7552da    
+    integration_test.go:304: DEBUG: Processing user: map[assigned_proofreader_at:<nil> assigned_redrawer_at:<nil> assigned_reviewer_at:<nil> assigned_translator_at:<nil> assigned_typesetter_at:<nil> assigned_uploader_at:<nil> created_at:1.768469525e+09 is_admin:false nickname:TestUser10 qq:1000010 user_id:019bc0ff-7399-7509-96e2-6e4e4cdd2f54]
+    integration_test.go:308: DEBUG: Found QQ 1000010 -> UserID 019bc0ff-7399-7509-96e2-6e4e4cdd2f54    
+    integration_test.go:340: ✓ Retrieved 10 user IDs
+    integration_test.go:374: ✓ Assigned role to user 1: translator
+    integration_test.go:374: ✓ Assigned role to user 2: translator
+    integration_test.go:374: ✓ Assigned role to user 3: proofreader
+    integration_test.go:374: ✓ Assigned role to user 4: proofreader
+    integration_test.go:374: ✓ Assigned role to user 5: typesetter
+    integration_test.go:374: ✓ Assigned role to user 6: typesetter
+    integration_test.go:374: ✓ Assigned role to user 7: redrawer
+    integration_test.go:374: ✓ Assigned role to user 8: redrawer
+    integration_test.go:374: ✓ Assigned role to user 9: reviewer
+    integration_test.go:374: ✓ Assigned role to user 10: reviewer
+    integration_test.go:391: ✓ Unassigned translator role from 019bc0ff-71be-711d-a4f6-bece28ca744e    
+    integration_test.go:406: ✓ Reassigned translator role to 019bc0ff-71be-711d-a4f6-bece28ca744e
+    integration_test.go:421: ✓ Retrieved 11 users total
+    integration_test.go:422: ✓ Test users created: Translators(2), Proofreaders(2), Typesetters(2), Redrawers(2), Reviewers(2)
+=== RUN   TestIntegrationFlow/02_CreateWorksetAndComicWithPreAssignments
+    integration_test.go:449: ✓ Created workset: 019bc0ff-73ad-7e32-90af-fd0e47907766
+    integration_test.go:464: ✓ Retrieved workset: Test Workset
+    integration_test.go:487: ✓ Adding pre-assignments for translator and proofreader
+    integration_test.go:508: ✓ Created comic: 019bc0ff-73b3-7ade-8c2e-f3a6f7909963
+    integration_test.go:523: ✓ Retrieved comic: 测试漫画 by 测试作者
+=== RUN   TestIntegrationFlow/03_CreatePagesAndUploadImages
+    integration_test.go:566: ✓ Created page 1: 019bc0ff-74a4-711a-8819-eda12add2d04
+    integration_test.go:567:   Upload URL: https://poprako-images.7db4eeb7c83e1757858b0eddf6e949c0.r2.cloudflarestorage.com/comic/019bc0ff-73b3-7ade-8c2e-f3a6f7909963/page_1.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=729ed4649f7b8157f541a45ad219b532%2F20260115%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260115T093205Z&X-Amz-Expires=600&X-Amz-SignedHeaders=host&x-id=PutObject&X-Amz-Signature=b20238559b6c34d2f1a4ffbf29de0ecddc749429d5885c8234a8091aea07f1ec
+    integration_test.go:575:   Read 246824 bytes from ..\mocks\133700406_p0.jpg
+    integration_test.go:601: ✓ Uploaded image 133700406_p0.jpg to OSS (status: 200)
+    integration_test.go:615: ✓ Marked page 1 as uploaded
+    integration_test.go:566: ✓ Created page 2: 019bc0ff-74b0-7daa-be07-10d6986e6d49
+    integration_test.go:567:   Upload URL: https://poprako-images.7db4eeb7c83e1757858b0eddf6e949c0.r2.cloudflarestorage.com/comic/019bc0ff-73b3-7ade-8c2e-f3a6f7909963/page_2.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=729ed4649f7b8157f541a45ad219b532%2F20260115%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260115T093205Z&X-Amz-Expires=600&X-Amz-SignedHeaders=host&x-id=PutObject&X-Amz-Signature=246d35829d20172661572cb89a3d4661f423737ea11e31b5c313689b15850061
+    integration_test.go:575:   Read 2938020 bytes from ..\mocks\ginko.jpg
+    integration_test.go:601: ✓ Uploaded image ginko.jpg to OSS (status: 200)
+    integration_test.go:615: ✓ Marked page 2 as uploaded
+    integration_test.go:566: ✓ Created page 3: 019bc0ff-74b0-7dab-8bf4-b263805fe652
+    integration_test.go:567:   Upload URL: https://poprako-images.7db4eeb7c83e1757858b0eddf6e949c0.r2.cloudflarestorage.com/comic/019bc0ff-73b3-7ade-8c2e-f3a6f7909963/page_3.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=729ed4649f7b8157f541a45ad219b532%2F20260115%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20260115T093205Z&X-Amz-Expires=600&X-Amz-SignedHeaders=host&x-id=PutObject&X-Amz-Signature=cda808f569db0ab42fdb19deb3b078226753f8849c5e76a3928797d8b7b93f4c
+    integration_test.go:575:   Read 2929732 bytes from ..\mocks\普瑞赛斯.png
+    integration_test.go:601: ✓ Uploaded image 普瑞赛斯.png to OSS (status: 200)
+    integration_test.go:615: ✓ Marked page 3 as uploaded
+    integration_test.go:658: ✓ Downloaded and verified image 133700406_p0.jpg (246824 bytes)
+    integration_test.go:658: ✓ Downloaded and verified image ginko.jpg (2938020 bytes)
+    integration_test.go:658: ✓ Downloaded and verified image 普瑞赛斯.png (2929732 bytes)
+=== RUN   TestIntegrationFlow/04_CreateUnits
+    integration_test.go:690: ✓ Created 2 units
+    integration_test.go:709: ✓ Retrieved 2 units
+=== RUN   TestIntegrationFlow/05_TranslationWorkflow
+    integration_test.go:742: ✓ Updated units with translations
+    integration_test.go:767: ✓ Updated units with proofreading
+    integration_test.go:785: ✓ Unit 1 proved with text: 校对文本1
+    integration_test.go:785: ✓ Unit 2 proved with text: 校对文本2
+=== RUN   TestIntegrationFlow/06_AssignmentsManagement
+    integration_test.go:812: ✓ Verified 2 pre-assignments
+    integration_test.go:849: ✓ Created normal assignment 1/3: 019bc101-3f1b-7e0e-bb3b-fa74c1a64e45     
+    integration_test.go:849: ✓ Created normal assignment 2/3: 019bc101-3f1c-76f8-9594-8911af7cd5e9     
+    integration_test.go:849: ✓ Created normal assignment 3/3: 019bc101-3f1d-7888-a922-b375e2478631     
+    integration_test.go:870: ✓ Retrieved 5 total assignments for comic (2 pre + 3 normal)
+    integration_test.go:887: ✓ Retrieved 1 assignments for user 019bc0ff-71be-711d-a4f6-bece28ca744e   
+    integration_test.go:900: ✓ Deleted assignment: 019bc101-3f1b-7e0e-bb3b-fa74c1a64e45
+    integration_test.go:923: ✓ Verified assignment deletion: 4 assignments remaining
+=== RUN   TestIntegrationFlow/07_RetrievalAndFiltering
+    integration_test.go:948: ✓ Retrieved 1 worksets
+    integration_test.go:963: ✓ Retrieved 1 comics in workset
+    integration_test.go:978: ✓ Filtered 1 comics by author
+    integration_test.go:993: ✓ Retrieved 3 pages for comic
+=== RUN   TestIntegrationFlow/08_Cleanup
+    integration_test.go:1006: ✓ Deleted 2 units
+    integration_test.go:1022: ✓ Deleted 4 assignments
+    integration_test.go:1036: ✓ Deleted 3 pages
+    integration_test.go:1048: ✓ Deleted comic: 019bc0ff-73b3-7ade-8c2e-f3a6f7909963
+    integration_test.go:1060: ✓ Deleted workset: 019bc0ff-73ad-7e32-90af-fd0e47907766
+    integration_test.go:1063: ✓ Cleanup completed successfully
+    integration_test.go:1064: Note: Test users (10) are left in the database for verification
+--- PASS: TestIntegrationFlow (118.22s)
+    --- PASS: TestIntegrationFlow/01_UserManagement (0.59s)
+    --- PASS: TestIntegrationFlow/02_CreateWorksetAndComicWithPreAssignments (0.25s)
+    --- PASS: TestIntegrationFlow/03_CreatePagesAndUploadImages (117.36s)
+    --- PASS: TestIntegrationFlow/04_CreateUnits (0.01s)
+    --- PASS: TestIntegrationFlow/05_TranslationWorkflow (0.00s)
+    --- PASS: TestIntegrationFlow/06_AssignmentsManagement (0.01s)
+    --- PASS: TestIntegrationFlow/07_RetrievalAndFiltering (0.00s)
+    --- PASS: TestIntegrationFlow/08_Cleanup (0.01s)
+PASS
+ok      poprako-main-server/tests       118.398s

@@ -46,7 +46,8 @@ func InitLogger() *zap.Logger {
 
 	core := zapcore.NewCore(cnslEnc, wrt, atmLvl)
 
-	lgr := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+	// zap.AddStacktrace(zapcore.ErrorLevel) can be added to include stack traces for errors.
+	lgr := zap.New(core, zap.AddCaller())
 
 	lgr.Info("Logger initialized", zap.String("level", atmLvl.String()))
 

@@ -17,7 +17,7 @@ func Run(appState state.AppState) {
 	routeApp(app, &appState)
 
 	// Run the application.
-	runServer(app, appState.Cfg.Port)
+	runServer(app, appState.Cfg.Host, appState.Cfg.Port)
 }
 
 // Route application endpoints.
@@ -25,6 +25,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	api := app.Party("/api/v1")
 
 	// Public routes (no auth required)
+	api.Get("/check-update", CheckUpdateHandler(appState))
 	api.Post("/login", LoginUser(appState))
 
 	// Apply auth middleware to all routes below
@@ -45,6 +46,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		worksets.Get("/{workset_id:string}", GetWorksetByID(appState))
 		worksets.Post("", CreateWorkset(appState))
 		worksets.Patch("/{workset_id:string}", UpdateWorksetByID(appState))
+		worksets.Delete("/{workset_id:string}", DeleteWorksetByID(appState))
 	}
 
 	comics := api.Party("/comics")
@@ -53,6 +55,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		comics.Get("/{comic_id:string}", GetComicInfoByID(appState))
 		comics.Post("", CreateComic(appState))
 		comics.Patch("/{comic_id:string}", UpdateComicByID(appState))
+		comics.Delete("/{comic_id:string}", DeleteComicByID(appState))
 	}
 
 	worksetComics := api.Party("/worksets/{workset_id:string}/comics")
@@ -64,6 +67,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	{
 		pages.Get("/{page_id:string}", GetPageByID(appState))
 		pages.Post("", CreatePages(appState))
+		pages.Delete("/{page_id:string}", DeletePageByID(appState))
 		pages.Patch("/{page_id:string}", UpdatePageByID(appState))
 	}
 
@@ -84,6 +88,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	{
 		asgns.Get("/{asgn_id:string}", GetAsgnByID(appState))
 		asgns.Post("", CreateAsgn(appState))
+		asgns.Delete("/{asgn_id:string}", DeleteAsgnByID(appState))
 		asgns.Patch("/{asgn_id:string}", UpdateAsgn(appState))
 	}
 
@@ -98,8 +103,12 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	}
 }
 
-func runServer(app *iris.Application, port uint16) {
-	addr := ":" + strconv.Itoa(int(port))
+func runServer(
+	app *iris.Application,
+	host string,
+	port uint16,
+) {
+	addr := host + ":" + strconv.Itoa(int(port))
 
 	app.Listen(addr)
 }

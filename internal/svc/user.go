@@ -59,25 +59,31 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 		UserID:    userBasic.ID,
 		IsAdmin:   userBasic.IsAdmin,
 		Nickname:  userBasic.Nickname,
-		CreatedAt: userBasic.CreatedAt,
+		CreatedAt: userBasic.CreatedAt.Unix(),
 	}
 	if userBasic.AssignedTranslatorAt != nil {
-		userInfo.AssignedTranslatorAt = *userBasic.AssignedTranslatorAt
+		ts := userBasic.AssignedTranslatorAt.Unix()
+		userInfo.AssignedTranslatorAt = &ts
 	}
 	if userBasic.AssignedProofreaderAt != nil {
-		userInfo.AssignedProofreaderAt = *userBasic.AssignedProofreaderAt
+		ts := userBasic.AssignedProofreaderAt.Unix()
+		userInfo.AssignedProofreaderAt = &ts
 	}
 	if userBasic.AssignedTypesetterAt != nil {
-		userInfo.AssignedTypesetterAt = *userBasic.AssignedTypesetterAt
+		ts := userBasic.AssignedTypesetterAt.Unix()
+		userInfo.AssignedTypesetterAt = &ts
 	}
 	if userBasic.AssignedRedrawerAt != nil {
-		userInfo.AssignedRedrawerAt = *userBasic.AssignedRedrawerAt
+		ts := userBasic.AssignedRedrawerAt.Unix()
+		userInfo.AssignedRedrawerAt = &ts
 	}
 	if userBasic.AssignedReviewerAt != nil {
-		userInfo.AssignedReviewerAt = *userBasic.AssignedReviewerAt
+		ts := userBasic.AssignedReviewerAt.Unix()
+		userInfo.AssignedReviewerAt = &ts
 	}
 	if userBasic.AssignedUploaderAt != nil {
-		userInfo.AssignedUploaderAt = *userBasic.AssignedUploaderAt
+		ts := userBasic.AssignedUploaderAt.Unix()
+		userInfo.AssignedUploaderAt = &ts
 	}
 
 	return accept(200, userInfo), NO_ERROR
@@ -94,7 +100,7 @@ func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) 
 	userInfo := model.UserInfo{
 		UserID:    userBasics.ID,
 		Nickname:  userBasics.Nickname,
-		CreatedAt: userBasics.CreatedAt,
+		CreatedAt: userBasics.CreatedAt.Unix(),
 	}
 
 	return accept(200, userInfo), NO_ERROR
@@ -282,27 +288,34 @@ func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.User
 	for _, ub := range userBasics {
 		ui := model.UserInfo{
 			UserID:    ub.ID,
+			QQ:        ub.QQ,
 			IsAdmin:   ub.IsAdmin,
 			Nickname:  ub.Nickname,
-			CreatedAt: ub.CreatedAt,
+			CreatedAt: ub.CreatedAt.Unix(),
 		}
 		if ub.AssignedTranslatorAt != nil {
-			ui.AssignedTranslatorAt = *ub.AssignedTranslatorAt
+			ts := ub.AssignedTranslatorAt.Unix()
+			ui.AssignedTranslatorAt = &ts
 		}
 		if ub.AssignedProofreaderAt != nil {
-			ui.AssignedProofreaderAt = *ub.AssignedProofreaderAt
+			ts := ub.AssignedProofreaderAt.Unix()
+			ui.AssignedProofreaderAt = &ts
 		}
 		if ub.AssignedTypesetterAt != nil {
-			ui.AssignedTypesetterAt = *ub.AssignedTypesetterAt
+			ts := ub.AssignedTypesetterAt.Unix()
+			ui.AssignedTypesetterAt = &ts
 		}
 		if ub.AssignedRedrawerAt != nil {
-			ui.AssignedRedrawerAt = *ub.AssignedRedrawerAt
+			ts := ub.AssignedRedrawerAt.Unix()
+			ui.AssignedRedrawerAt = &ts
 		}
 		if ub.AssignedReviewerAt != nil {
-			ui.AssignedReviewerAt = *ub.AssignedReviewerAt
+			ts := ub.AssignedReviewerAt.Unix()
+			ui.AssignedReviewerAt = &ts
 		}
 		if ub.AssignedUploaderAt != nil {
-			ui.AssignedUploaderAt = *ub.AssignedUploaderAt
+			ts := ub.AssignedUploaderAt.Unix()
+			ui.AssignedUploaderAt = &ts
 		}
 
 		userInfos = append(userInfos, ui)
@@ -319,8 +332,8 @@ func (us *userSvc) AssignUserRole(
 
 	hasChange := false
 
-	now := time.Now().Unix()
-	zero := int64(0)
+	now := time.Now()
+	zero := time.Time{}
 
 	roles := args.Roles
 

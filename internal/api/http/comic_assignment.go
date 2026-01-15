@@ -2,7 +2,6 @@ package http
 
 import (
 	"poprako-main-server/internal/model"
-	"poprako-main-server/internal/model/po"
 	"poprako-main-server/internal/state"
 	"poprako-main-server/internal/svc"
 
@@ -110,16 +109,34 @@ func UpdateAsgn(appState *state.AppState) iris.Handler {
 			return
 		}
 
-		var patchAsgn po.PatchComicAsgn
+		var args model.UpdateComicAsgnArgs
 
-		if err := ctx.ReadJSON(&patchAsgn); err != nil {
+		if err := ctx.ReadJSON(&args); err != nil {
 			reject(ctx, iris.StatusBadRequest, "请求体格式错误")
 			return
 		}
 
-		patchAsgn.ID = asgnID
+		args.AsgnID = asgnID
 
-		err := appState.ComicAsgnSvc.UpdateAsgnByID(&patchAsgn)
+		err := appState.ComicAsgnSvc.UpdateAsgnByID(args)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}
+
+func DeleteAsgnByID(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		asgnID := ctx.Params().Get("asgn_id")
+		if asgnID == "" {
+			reject(ctx, iris.StatusBadRequest, "缺少 asgn_id 路径参数")
+			return
+		}
+
+		err := appState.ComicAsgnSvc.DeleteAsgnByID(asgnID)
 		if err != svc.NO_ERROR {
 			reject(ctx, err.Code(), err.Msg())
 			return

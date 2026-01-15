@@ -27,6 +27,8 @@ type ComicPageSvc interface {
 	)
 
 	UpdatePageByID(opID string, args *model.PatchComicPageArgs) SvcErr
+
+	DeletePageByID(pageID string) SvcErr
 }
 
 type comicPageSvc struct {
@@ -143,12 +145,11 @@ func (cps *comicPageSvc) CreatePages(
 		ossKey := fmt.Sprintf("comic/%s/page_%d.%s", arg.ComicID, arg.Index, arg.ImageExt)
 
 		newPages[i] = po.NewComicPage{
-			ID:        pageID,
-			ComicID:   arg.ComicID,
-			Index:     arg.Index,
-			OSSKey:    ossKey,
-			SizeBytes: 0, // Will be updated when client confirms upload
-			Uploaded:  &uploadedFalse,
+			ID:       pageID,
+			ComicID:  arg.ComicID,
+			Index:    arg.Index,
+			OSSKey:   ossKey,
+			Uploaded: &uploadedFalse,
 		}
 
 		// Generate presigned upload URL
@@ -193,6 +194,19 @@ func (cps *comicPageSvc) UpdatePageByID(opID string, args *model.PatchComicPageA
 
 	if err := cps.pageRepo.UpdatePageByID(nil, patchPage); err != nil {
 		zap.L().Error("Failed to update page", zap.String("pageID", args.ID), zap.Error(err))
+		return DB_FAILURE
+	}
+
+	return NO_ERROR
+}
+
+func (cps *comicPageSvc) DeletePageByID(pageID string) SvcErr {
+	if err := cps.pageRepo.DeletePageByID(nil, pageID); err != nil {
+		if err == repo.REC_NOT_FOUND {
+			zap.L().Warn("Page not found for deletion", zap.String("pageID", pageID))
+			return NOT_FOUND
+		}
+		zap.L().Error("Failed to delete page", zap.String("pageID", pageID), zap.Error(err))
 		return DB_FAILURE
 	}
 

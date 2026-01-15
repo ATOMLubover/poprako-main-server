@@ -16,6 +16,8 @@ type WorksetSvc interface {
 	CreateWorkset(opID string, args *model.CreateWorksetArgs) (SvcRslt[model.CreateWorksetReply], SvcErr)
 
 	UpdateWorksetByID(args *model.UpdateWorksetArgs) SvcErr
+
+	DeleteWorksetByID(worksetID string) SvcErr
 }
 
 type worksetSvc struct {
@@ -50,10 +52,9 @@ func (ws *worksetSvc) GetWorksetByID(worksetID string) (SvcRslt[model.WorksetInf
 		Description:     detail.Description,
 		CreatorID:       detail.CreatorID,
 		CreatorNickname: detail.CreatorNickname,
-		CreatedAt:       detail.CreatedAt,
-		UpdatedAt:       detail.UpdatedAt,
+		CreatedAt:       detail.CreatedAt.Unix(),
+		UpdatedAt:       detail.UpdatedAt.Unix(),
 	}
-
 	return accept(200, info), NO_ERROR
 }
 
@@ -75,8 +76,8 @@ func (ws *worksetSvc) RetrieveWorksets(limit, offset int) (SvcRslt[[]model.Works
 			Description:     d.Description,
 			CreatorID:       d.CreatorID,
 			CreatorNickname: d.CreatorNickname,
-			CreatedAt:       d.CreatedAt,
-			UpdatedAt:       d.UpdatedAt,
+			CreatedAt:       d.CreatedAt.Unix(),
+			UpdatedAt:       d.UpdatedAt.Unix(),
 		})
 	}
 
@@ -127,6 +128,19 @@ func (ws *worksetSvc) UpdateWorksetByID(args *model.UpdateWorksetArgs) SvcErr {
 
 	if err := ws.repo.UpdateWorksetByID(nil, patch); err != nil {
 		zap.L().Error("Failed to update workset", zap.Error(err))
+		return DB_FAILURE
+	}
+
+	return NO_ERROR
+}
+
+func (ws *worksetSvc) DeleteWorksetByID(worksetID string) SvcErr {
+	if err := ws.repo.DeleteWorksetByID(nil, worksetID); err != nil {
+		if err == repo.REC_NOT_FOUND {
+			zap.L().Warn("Workset not found for deletion", zap.String("worksetID", worksetID))
+			return NOT_FOUND
+		}
+		zap.L().Error("Failed to delete workset", zap.String("worksetID", worksetID), zap.Error(err))
 		return DB_FAILURE
 	}
 

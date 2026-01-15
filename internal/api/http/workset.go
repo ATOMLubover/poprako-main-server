@@ -99,3 +99,21 @@ func UpdateWorksetByID(appState *state.AppState) iris.Handler {
 		ctx.StatusCode(iris.StatusNoContent)
 	}
 }
+
+func DeleteWorksetByID(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		worksetID := ctx.Params().Get("workset_id")
+		if worksetID == "" {
+			reject(ctx, iris.StatusBadRequest, "缺少 workset_id 路径参数")
+			return
+		}
+
+		err := appState.WorksetSvc.DeleteWorksetByID(worksetID)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}

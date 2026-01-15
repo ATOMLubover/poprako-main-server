@@ -1,5 +1,7 @@
 package po
 
+import "time"
+
 // Model objects (persistence objects) for user table.
 
 const (
@@ -20,16 +22,16 @@ type BasicUser struct {
 	QQ       string `gorm:"qq"`
 	Nickname string `gorm:"nickname"`
 
-	IsAdmin               bool   `gorm:"is_admin"`
-	AssignedTranslatorAt  *int64 `gorm:"assigned_translator_at"`
-	AssignedProofreaderAt *int64 `gorm:"assigned_proofreader_at"`
-	AssignedTypesetterAt  *int64 `gorm:"assigned_typesetter_at"`
-	AssignedRedrawerAt    *int64 `gorm:"assigned_redrawer_at"`
-	AssignedReviewerAt    *int64 `gorm:"assigned_reviewer_at"`
-	AssignedUploaderAt    *int64 `gorm:"assigned_uploader_at"`
+	IsAdmin               bool       `gorm:"is_admin"`
+	AssignedTranslatorAt  *time.Time `gorm:"assigned_translator_at"`
+	AssignedProofreaderAt *time.Time `gorm:"assigned_proofreader_at"`
+	AssignedTypesetterAt  *time.Time `gorm:"assigned_typesetter_at"`
+	AssignedRedrawerAt    *time.Time `gorm:"assigned_redrawer_at"`
+	AssignedReviewerAt    *time.Time `gorm:"assigned_reviewer_at"`
+	AssignedUploaderAt    *time.Time `gorm:"assigned_uploader_at"`
 
-	CreatedAt int64 `gorm:"created_at"`
-	UpdatedAt int64 `gorm:"updated_at"`
+	CreatedAt time.Time `gorm:"created_at"`
+	UpdatedAt time.Time `gorm:"updated_at"`
 }
 
 // Used when login.
@@ -46,13 +48,13 @@ type PatchUser struct {
 	Nickname *string `gorm:"nickname"`
 	IsAdmin  *bool   `gorm:"is_admin"`
 
-	// If fields below are set 0, that means to erase the assignment time.
-	AssignedTranslatorAt  *int64 `gorm:"assigned_translator_at"`
-	AssignedProofreaderAt *int64 `gorm:"assigned_proofreader_at"`
-	AssignedTypesetterAt  *int64 `gorm:"assigned_typesetter_at"`
-	AssignedRedrawerAt    *int64 `gorm:"assigned_redrawer_at"`
-	AssignedReviewerAt    *int64 `gorm:"assigned_reviewer_at"`
-	AssignedUploaderAt    *int64 `gorm:"assigned_uploader_at"`
+	// If fields below are set to zero time, that means to erase the assignment time.
+	AssignedTranslatorAt  *time.Time `gorm:"assigned_translator_at"`
+	AssignedProofreaderAt *time.Time `gorm:"assigned_proofreader_at"`
+	AssignedTypesetterAt  *time.Time `gorm:"assigned_typesetter_at"`
+	AssignedRedrawerAt    *time.Time `gorm:"assigned_redrawer_at"`
+	AssignedReviewerAt    *time.Time `gorm:"assigned_reviewer_at"`
+	AssignedUploaderAt    *time.Time `gorm:"assigned_uploader_at"`
 }
 
 func (*NewUser) TableName() string { return USER_TABLE }

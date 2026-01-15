@@ -21,6 +21,8 @@ type ComicRepo interface {
 	CreateComic(newComic *po.NewComic) error
 
 	UpdateComicByID(ex Executor, patchComic *po.PatchComic) error
+
+	DeleteComicByID(ex Executor, comicID string) error
 }
 
 type comicRepo struct {
@@ -176,14 +178,14 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 
 	if patchComic.TranslatingStartedAt != nil {
-		if *patchComic.TranslatingStartedAt == 0 {
+		if patchComic.TranslatingStartedAt.IsZero() {
 			updates["translating_started_at"] = nil
 		} else {
 			updates["translating_started_at"] = *patchComic.TranslatingStartedAt
 		}
 	}
 	if patchComic.TranslatingCompletedAt != nil {
-		if *patchComic.TranslatingCompletedAt == 0 {
+		if patchComic.TranslatingCompletedAt.IsZero() {
 			updates["translating_completed_at"] = nil
 		} else {
 			updates["translating_completed_at"] = *patchComic.TranslatingCompletedAt
@@ -191,14 +193,14 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 
 	if patchComic.ProofreadingStartedAt != nil {
-		if *patchComic.ProofreadingStartedAt == 0 {
+		if patchComic.ProofreadingStartedAt.IsZero() {
 			updates["proofreading_started_at"] = nil
 		} else {
 			updates["proofreading_started_at"] = *patchComic.ProofreadingStartedAt
 		}
 	}
 	if patchComic.ProofreadingCompletedAt != nil {
-		if *patchComic.ProofreadingCompletedAt == 0 {
+		if patchComic.ProofreadingCompletedAt.IsZero() {
 			updates["proofreading_completed_at"] = nil
 		} else {
 			updates["proofreading_completed_at"] = *patchComic.ProofreadingCompletedAt
@@ -206,14 +208,14 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 
 	if patchComic.TypesettingStartedAt != nil {
-		if *patchComic.TypesettingStartedAt == 0 {
+		if patchComic.TypesettingStartedAt.IsZero() {
 			updates["typesetting_started_at"] = nil
 		} else {
 			updates["typesetting_started_at"] = *patchComic.TypesettingStartedAt
 		}
 	}
 	if patchComic.TypesettingCompletedAt != nil {
-		if *patchComic.TypesettingCompletedAt == 0 {
+		if patchComic.TypesettingCompletedAt.IsZero() {
 			updates["typesetting_completed_at"] = nil
 		} else {
 			updates["typesetting_completed_at"] = *patchComic.TypesettingCompletedAt
@@ -221,7 +223,7 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 
 	if patchComic.ReviewingCompletedAt != nil {
-		if *patchComic.ReviewingCompletedAt == 0 {
+		if patchComic.ReviewingCompletedAt.IsZero() {
 			updates["reviewing_completed_at"] = nil
 		} else {
 			updates["reviewing_completed_at"] = *patchComic.ReviewingCompletedAt
@@ -229,7 +231,7 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 
 	if patchComic.UploadingCompletedAt != nil {
-		if *patchComic.UploadingCompletedAt == 0 {
+		if patchComic.UploadingCompletedAt.IsZero() {
 			updates["uploading_completed_at"] = nil
 		} else {
 			updates["uploading_completed_at"] = *patchComic.UploadingCompletedAt
@@ -336,4 +338,32 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 	}
 
 	return lst, nil
+}
+
+func (cr *comicRepo) DeleteComicByID(ex Executor, comicID string) error {
+	return cr.Exec().Transaction(func(tx Executor) error {
+		// Get comic first to get workset_id
+		comic := &po.BasicComic{}
+		if err := tx.Where("id = ?", comicID).First(comic).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return REC_NOT_FOUND
+			}
+			return fmt.Errorf("Failed to get comic for deletion: %w", err)
+		}
+
+		// Delete the comic
+		if err := tx.Where("id = ?", comicID).Delete(&po.BasicComic{}).Error; err != nil {
+			return fmt.Errorf("Failed to delete comic: %w", err)
+		}
+
+		// Update workset comic_count
+		if err := tx.Model(&po.DetailedWorkset{}).
+			Where("id = ?", comic.WorksetID).
+			UpdateColumn("comic_count", gorm.Expr("comic_count - ?", 1)).
+			Error; err != nil {
+			return fmt.Errorf("Failed to update workset comic_count: %w", err)
+		}
+
+		return nil
+	})
 }

@@ -62,7 +62,7 @@ func (m *mockWorksetRepo) CreateWorkset(ex Executor, newWorkset *po.NewWorkset) 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	now := time.Now().Unix()
+	now := time.Now()
 	var desc *string
 	if newWorkset.Description != nil {
 		v := *newWorkset.Description
@@ -104,7 +104,19 @@ func (m *mockWorksetRepo) UpdateWorksetByID(ex Executor, patchWorkset *po.PatchW
 	if patchWorkset.CreatorID != nil {
 		w.CreatorID = *patchWorkset.CreatorID
 	}
-	w.UpdatedAt = time.Now().Unix()
+	w.UpdatedAt = time.Now()
 	m.store[patchWorkset.ID] = w
+	return nil
+}
+
+func (m *mockWorksetRepo) DeleteWorksetByID(ex Executor, worksetID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.store[worksetID]; !exists {
+		return REC_NOT_FOUND
+	}
+
+	delete(m.store, worksetID)
 	return nil
 }

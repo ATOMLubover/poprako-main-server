@@ -19,6 +19,8 @@ type ComicSvc interface {
 	CreateComic(opID string, args model.CreateComicArgs) (SvcRslt[model.CreateComicReply], SvcErr)
 
 	UpdateComicByID(args model.UpdateComicArgs) SvcErr
+
+	DeleteComicByID(comicID string) SvcErr
 }
 
 type comicSvc struct {
@@ -64,19 +66,19 @@ func (cs *comicSvc) GetComicInfoByID(comicID string) (SvcRslt[model.ComicInfo], 
 		Title:           basic.Title,
 		Description:     basic.Description,
 		Comment:         basic.Comment,
-		CreatedAt:       basic.CreatedAt,
-		UpdatedAt:       basic.UpdatedAt,
+		CreatedAt:       basic.CreatedAt.Unix(),
+		UpdatedAt:       basic.UpdatedAt.Unix(),
 	}
 
 	// Handle optional timestamp fields
-	info.TranslatingStartedAt = basic.TranslatingStartedAt
-	info.TranslatingCompletedAt = basic.TranslatingCompletedAt
-	info.ProofreadingStartedAt = basic.ProofreadingStartedAt
-	info.ProofreadingCompletedAt = basic.ProofreadingCompletedAt
-	info.TypesettingStartedAt = basic.TypesettingStartedAt
-	info.TypesettingCompletedAt = basic.TypesettingCompletedAt
-	info.ReviewingCompletedAt = basic.ReviewingCompletedAt
-	info.UploadingCompletedAt = basic.UploadingCompletedAt
+	info.TranslatingStartedAt = timePtrToInt64Ptr(basic.TranslatingStartedAt)
+	info.TranslatingCompletedAt = timePtrToInt64Ptr(basic.TranslatingCompletedAt)
+	info.ProofreadingStartedAt = timePtrToInt64Ptr(basic.ProofreadingStartedAt)
+	info.ProofreadingCompletedAt = timePtrToInt64Ptr(basic.ProofreadingCompletedAt)
+	info.TypesettingStartedAt = timePtrToInt64Ptr(basic.TypesettingStartedAt)
+	info.TypesettingCompletedAt = timePtrToInt64Ptr(basic.TypesettingCompletedAt)
+	info.ReviewingCompletedAt = timePtrToInt64Ptr(basic.ReviewingCompletedAt)
+	info.UploadingCompletedAt = timePtrToInt64Ptr(basic.UploadingCompletedAt)
 
 	return accept(200, info), NO_ERROR
 }
@@ -102,15 +104,14 @@ func (cs *comicSvc) GetComicBriefsByWorksetID(worksetID string, offset, limit in
 		}
 
 		// Handle optional timestamp fields
-		brief.TranslatingStartedAt = cb.TranslatingStartedAt
-		brief.TranslatingCompletedAt = cb.TranslatingCompletedAt
-		brief.ProofreadingStartedAt = cb.ProofreadingStartedAt
-		brief.ProofreadingCompletedAt = cb.ProofreadingCompletedAt
-		brief.TypesettingStartedAt = cb.TypesettingStartedAt
-		brief.TypesettingCompletedAt = cb.TypesettingCompletedAt
-		brief.ReviewingCompletedAt = cb.ReviewingCompletedAt
-		brief.UploadingCompletedAt = cb.UploadingCompletedAt
-
+		brief.TranslatingStartedAt = timePtrToInt64Ptr(cb.TranslatingStartedAt)
+		brief.TranslatingCompletedAt = timePtrToInt64Ptr(cb.TranslatingCompletedAt)
+		brief.ProofreadingStartedAt = timePtrToInt64Ptr(cb.ProofreadingStartedAt)
+		brief.ProofreadingCompletedAt = timePtrToInt64Ptr(cb.ProofreadingCompletedAt)
+		brief.TypesettingStartedAt = timePtrToInt64Ptr(cb.TypesettingStartedAt)
+		brief.TypesettingCompletedAt = timePtrToInt64Ptr(cb.TypesettingCompletedAt)
+		brief.ReviewingCompletedAt = timePtrToInt64Ptr(cb.ReviewingCompletedAt)
+		brief.UploadingCompletedAt = timePtrToInt64Ptr(cb.UploadingCompletedAt)
 		lst = append(lst, brief)
 	}
 
@@ -137,14 +138,14 @@ func (cs *comicSvc) RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.
 		}
 
 		// Handle optional timestamp fields
-		brief.TranslatingStartedAt = cb.TranslatingStartedAt
-		brief.TranslatingCompletedAt = cb.TranslatingCompletedAt
-		brief.ProofreadingStartedAt = cb.ProofreadingStartedAt
-		brief.ProofreadingCompletedAt = cb.ProofreadingCompletedAt
-		brief.TypesettingStartedAt = cb.TypesettingStartedAt
-		brief.TypesettingCompletedAt = cb.TypesettingCompletedAt
-		brief.ReviewingCompletedAt = cb.ReviewingCompletedAt
-		brief.UploadingCompletedAt = cb.UploadingCompletedAt
+		brief.TranslatingStartedAt = timePtrToInt64Ptr(cb.TranslatingStartedAt)
+		brief.TranslatingCompletedAt = timePtrToInt64Ptr(cb.TranslatingCompletedAt)
+		brief.ProofreadingStartedAt = timePtrToInt64Ptr(cb.ProofreadingStartedAt)
+		brief.ProofreadingCompletedAt = timePtrToInt64Ptr(cb.ProofreadingCompletedAt)
+		brief.TypesettingStartedAt = timePtrToInt64Ptr(cb.TypesettingStartedAt)
+		brief.TypesettingCompletedAt = timePtrToInt64Ptr(cb.TypesettingCompletedAt)
+		brief.ReviewingCompletedAt = timePtrToInt64Ptr(cb.ReviewingCompletedAt)
+		brief.UploadingCompletedAt = timePtrToInt64Ptr(cb.UploadingCompletedAt)
 
 		lst = append(lst, brief)
 	}
@@ -198,48 +199,8 @@ func (cs *comicSvc) CreateComic(opID string, args model.CreateComicArgs) (SvcRsl
 		}
 
 		// Create pre-assignments
-		for _, preAsgn := range args.PreAsgns {
-			asgnID, err := genUUID()
-			if err != nil {
-				return fmt.Errorf("failed to generate assignment ID: %w", err)
-			}
-
-			newAsgn := &po.NewComicAsgn{
-				ID:      asgnID,
-				ComicID: newID,
-				UserID:  preAsgn.AssigneeID,
-			}
-
-			if err := cs.comicAsgnRepo.CreateAsgn(tx, newAsgn); err != nil {
-				return fmt.Errorf("failed to create assignment: %w", err)
-			}
-
-			// Update assignment roles
-			patchAsgn := &po.PatchComicAsgn{
-				ID: asgnID,
-			}
-
-			now := time.Now().Unix()
-
-			if preAsgn.IsTranslator != nil && *preAsgn.IsTranslator {
-				patchAsgn.AssignedTranslatorAt = &now
-			}
-			if preAsgn.IsProofreader != nil && *preAsgn.IsProofreader {
-				patchAsgn.AssignedProofreaderAt = &now
-			}
-			if preAsgn.IsTypesetter != nil && *preAsgn.IsTypesetter {
-				patchAsgn.AssignedTypesetterAt = &now
-			}
-			if preAsgn.IsRedrawer != nil && *preAsgn.IsRedrawer {
-				patchAsgn.AssignedRedrawerAt = &now
-			}
-			if preAsgn.IsReviewer != nil && *preAsgn.IsReviewer {
-				patchAsgn.AssignedReviewerAt = &now
-			}
-
-			if err := cs.comicAsgnRepo.UpdateAsgnByID(tx, patchAsgn); err != nil {
-				return fmt.Errorf("failed to update assignment roles: %w", err)
-			}
+		if err := cs.createPreAssignments(tx, newID, args.PreAsgns); err != nil {
+			return err
 		}
 
 		return nil
@@ -319,6 +280,72 @@ func (cs *comicSvc) validatePreAssignments(preAsgns []model.PreAsgnArgs) SvcErr 
 				return PERMISSION_DENIED
 			}
 		}
+	}
+
+	return NO_ERROR
+}
+
+// createPreAssignments creates comic assignments for pre-assigned users.
+// For each pre-assignment, it creates a new assignment record and sets the role timestamps.
+func (cs *comicSvc) createPreAssignments(tx repo.Executor, comicID string, preAsgns []model.PreAsgnArgs) error {
+	now := time.Now()
+
+	for _, preAsgn := range preAsgns {
+		// Generate assignment ID
+		asgnID, err := genUUID()
+		if err != nil {
+			return fmt.Errorf("failed to generate assignment ID: %w", err)
+		}
+
+		// Create the assignment record
+		newAsgn := &po.NewComicAsgn{
+			ID:      asgnID,
+			ComicID: comicID,
+			UserID:  preAsgn.AssigneeID,
+		}
+
+		if err := cs.comicAsgnRepo.CreateAsgn(tx, newAsgn); err != nil {
+			return fmt.Errorf("failed to create assignment: %w", err)
+		}
+
+		// Set role timestamps based on pre-assignment roles
+		patchAsgn := &po.PatchComicAsgn{
+			ID: asgnID,
+		}
+
+		if preAsgn.IsTranslator != nil && *preAsgn.IsTranslator {
+			patchAsgn.AssignedTranslatorAt = &now
+		}
+		if preAsgn.IsProofreader != nil && *preAsgn.IsProofreader {
+			patchAsgn.AssignedProofreaderAt = &now
+		}
+		if preAsgn.IsTypesetter != nil && *preAsgn.IsTypesetter {
+			patchAsgn.AssignedTypesetterAt = &now
+		}
+		if preAsgn.IsRedrawer != nil && *preAsgn.IsRedrawer {
+			patchAsgn.AssignedRedrawerAt = &now
+		}
+		if preAsgn.IsReviewer != nil && *preAsgn.IsReviewer {
+			patchAsgn.AssignedReviewerAt = &now
+		}
+
+		// Update the assignment with role timestamps
+		if err := cs.comicAsgnRepo.UpdateAsgnByID(tx, patchAsgn); err != nil {
+			return fmt.Errorf("failed to update assignment roles: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (cs *comicSvc) DeleteComicByID(comicID string) SvcErr {
+	if err := cs.repo.DeleteComicByID(nil, comicID); err != nil {
+		if err == repo.REC_NOT_FOUND {
+			zap.L().Warn("Comic not found for deletion", zap.String("comicID", comicID))
+			return NOT_FOUND
+		}
+		zap.L().Error("Failed to delete comic", zap.String("comicID", comicID), zap.Error(err))
+		return DB_FAILURE
 	}
 
 	return NO_ERROR

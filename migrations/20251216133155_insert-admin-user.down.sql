@@ -1,0 +1,2 @@
+-- User should be deleted when table is dropped.
+-- So no need to delete the admin user here.
