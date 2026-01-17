@@ -8,6 +8,24 @@ import (
 	"github.com/kataras/iris/v12"
 )
 
+func GetCurrUserInfo(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		userID := ctx.Values().GetString("user_id")
+		if userID == "" {
+			reject(ctx, iris.StatusUnauthorized, "未认证用户")
+			return
+		}
+
+		res, err := appState.UserSvc.GetUserInfoByID(userID)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		accept(ctx, res)
+	}
+}
+
 func GetUserInfoByID(appState *state.AppState) iris.Handler {
 	return func(ctx iris.Context) {
 		// user_id from path param.

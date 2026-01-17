@@ -29,13 +29,6 @@ type UpdateUserArgs struct {
 	UserID   string  `json:"user_id"`
 	QQ       *string `json:"qq,omitempty"`
 	Nickname *string `json:"nickname,omitempty"`
-	// IsAdmin           *bool   `json:"is_admin,omitempty"`
-	// AssignTranslator  *bool   `json:"assign_translator,omitempty"`
-	// AssignProofreader *bool   `json:"assign_proofreader,omitempty"`
-	// AssignTypesetter  *bool   `json:"assign_typesetter,omitempty"`
-	// AssignRedrawer    *bool   `json:"assign_redrawer,omitempty"`
-	// AssignReviewer    *bool   `json:"assign_reviewer,omitempty"`
-	// AssignUploader    *bool   `json:"assign_uploader,omitempty"`
 }
 
 type InviteUserArgs struct {
@@ -48,6 +41,8 @@ type InviteUserReply struct {
 
 type RetrieveUserOpt struct {
 	Nickname *string `url:"nn,omitempty"` // Fuzzy
+
+	QQ *string `url:"qq,omitempty"`
 
 	IsAdmin *bool `url:"ia,omitempty"`
 

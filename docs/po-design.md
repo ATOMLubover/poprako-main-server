@@ -57,7 +57,7 @@ func (*BasicUser) TableName() string { return USER_TABLE }
 ```go
 type NewUser struct {
     ID           string `gorm:"id;primaryKey"`
-    Email        string `gorm:"email"`
+    Email        string `gorm:"qq"`
     PasswordHash string `gorm:"password_hash"`
 }
 ```
@@ -67,7 +67,7 @@ type NewUser struct {
 ```go
 type BasicUser struct {
     ID        string `gorm:"id;primaryKey"`
-    Email     string `gorm:"email"`
+    Email     string `gorm:"qq"`
     Nickname  string `gorm:"nickname"`
     CreatedAt int64  `gorm:"created_at"`
 }
@@ -78,7 +78,7 @@ type BasicUser struct {
 ```go
 type PatchUser struct {
     ID       string `gorm:"id;primaryKey"`
-    Email    *string `gorm:"email"`
+    Email    *string `gorm:"qq"`
     Nickname *string `gorm:"nickname"`
 }
 ```

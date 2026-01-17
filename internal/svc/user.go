@@ -93,7 +93,7 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) {
 	userBasics, err := us.repo.GetUserByQQ(nil, qq)
 	if err != nil {
-		zap.L().Error("Failed to get user basics by email", zap.String("email", qq), zap.Error(err))
+		zap.L().Error("Failed to get user basics by qq", zap.String("qq", qq), zap.Error(err))
 		return SvcRslt[model.UserInfo]{}, DB_FAILURE
 	}
 
@@ -112,16 +112,16 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 		// If invitation code is provided, validate it.
 		// This happens when a new user is trying to register.
 
-		invCode, err := us.verifyInvCode(args.InvCode)
-		if err != nil {
-			zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
-		}
+		// invCode, err := us.verifyInvCode(args.InvCode)
+		// if err != nil {
+		// 	zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
+		// 	return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
+		// }
 
-		if invCode != args.QQ {
-			zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
-			return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
-		}
+		// if invCode != args.QQ {
+		// 	zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
+		// 	return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
+		// }
 
 		// Verification passed.
 
@@ -131,10 +131,21 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 			return SvcRslt[model.LoginReply]{}, PWD_HASH_FAILURE
 		}
 
+		zap.L().Debug(
+			"test for register pwd hash",
+			zap.String("hash", newPwdHash),
+			zap.Any("raw", args),
+		)
+
 		newID, err := genUUID()
 		if err != nil {
 			zap.L().Error("Failed to generate UUID during user login", zap.String("qq", args.QQ), zap.Error(err))
 			return SvcRslt[model.LoginReply]{}, ID_GEN_FAILURE
+		}
+
+		// Use placeholder for nickname if args.Nickname is empty.
+		if args.Nickname == "" {
+			args.Nickname = "OvO_" + newID[:8]
 		}
 
 		newUser := &po.NewUser{
@@ -144,7 +155,7 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 			PasswordHash: newPwdHash,
 		}
 
-		// The insertion may fail due to UNIQUE email constraint violation.
+		// The insertion may fail due to UNIQUE qq constraint violation.
 		// This is expected and acceptable in concurrent login scenarios.
 		if err := us.repo.CreateUser(nil, newUser); err != nil {
 			zap.L().Error("Failed to create new user during login", zap.String("qq", args.QQ), zap.Error(err))
@@ -159,16 +170,22 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 			return SvcRslt[model.LoginReply]{}, DB_FAILURE
 		}
 
-		return accept(204, model.LoginReply{Token: token}), NO_ERROR
+		return accept(200, model.LoginReply{Token: token}), NO_ERROR
 	}
 
 	// No invitation code provided, treat as existing user login.
 
 	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
 	if err != nil {
-		zap.L().Warn("Failed to get password hash during user login", zap.String("email", args.QQ), zap.Error(err))
+		zap.L().Warn("Failed to get password hash during user login", zap.String("qq", args.QQ), zap.Error(err))
 		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
+
+	zap.L().Debug(
+		"test for login",
+		zap.Any("secret", secret),
+		zap.Any("raw", args),
+	)
 
 	// If the user exists, verify the password.
 	if !us.verifyPwd(secret.PwdHash, args.Password) {
@@ -193,58 +210,6 @@ func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 		Nickname: args.Nickname,
 	}
 
-	// // Handle assignment fields.
-	// zero := int64(0)
-
-	// if args.AssignTranslator != nil {
-	// 	if *args.AssignTranslator {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedTranslatorAt = &now
-	// 	} else {
-	// 		updateUser.AssignedTranslatorAt = &zero
-	// 	}
-	// }
-	// if args.AssignProofreader != nil {
-	// 	if *args.AssignProofreader {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedProofreaderAt = &now
-	// 	} else {
-	// 		updateUser.AssignedProofreaderAt = &zero
-	// 	}
-	// }
-	// if args.AssignTypesetter != nil {
-	// 	if *args.AssignTypesetter {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedTypesetterAt = &now
-	// 	} else {
-	// 		updateUser.AssignedTypesetterAt = &zero
-	// 	}
-	// }
-	// if args.AssignRedrawer != nil {
-	// 	if *args.AssignRedrawer {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedRedrawerAt = &now
-	// 	} else {
-	// 		updateUser.AssignedRedrawerAt = &zero
-	// 	}
-	// }
-	// if args.AssignReviewer != nil {
-	// 	if *args.AssignReviewer {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedReviewerAt = &now
-	// 	} else {
-	// 		updateUser.AssignedReviewerAt = &zero
-	// 	}
-	// }
-	// if args.AssignUploader != nil {
-	// 	if *args.AssignUploader {
-	// 		now := time.Now().Unix()
-	// 		updateUser.AssignedUploaderAt = &now
-	// 	} else {
-	// 		updateUser.AssignedUploaderAt = &zero
-	// 	}
-	// }
-
 	if err := us.repo.UpdateUserByID(nil, updateUser); err != nil {
 		zap.L().Error("Failed to update user info", zap.String("userID", args.UserID), zap.Error(err))
 		return DB_FAILURE
@@ -253,16 +218,16 @@ func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 	return NO_ERROR
 }
 
-func (us *userSvc) InviteUser(operUserID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr) {
-	userBasic, err := us.repo.GetUserByID(nil, operUserID)
+func (us *userSvc) InviteUser(opID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr) {
+	opBasic, err := us.repo.GetUserByID(nil, opID)
 	if err != nil {
-		zap.L().Error("Failed to get user basics by ID during invitation", zap.String("userID", operUserID), zap.Error(err))
+		zap.L().Error("Failed to get user basics by ID during invitation", zap.String("userID", opID), zap.Error(err))
 		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
 	}
 
 	// Check whether operator is admin.
-	if !userBasic.IsAdmin {
-		zap.L().Warn("Non-admin user attempted to invite user", zap.String("userID", operUserID))
+	if !opBasic.IsAdmin {
+		zap.L().Warn("Non-admin user attempted to invite user", zap.String("userID", opID))
 		return SvcRslt[model.InviteUserReply]{}, PERMISSION_DENIED
 	}
 

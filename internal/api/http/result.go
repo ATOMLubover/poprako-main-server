@@ -17,6 +17,8 @@ type HTTPRslt[T any] struct {
 
 // Unified wrapper to response to failed request.
 func reject(ctx iris.Context, code uint16, msg string) {
+	ctx.StatusCode(int(code))
+
 	ctx.JSON(HTTPRslt[string]{
 		Code: code,
 		Msg:  msg,

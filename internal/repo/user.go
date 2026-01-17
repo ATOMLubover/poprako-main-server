@@ -194,6 +194,10 @@ func (ur *userRepo) RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.
 		query = query.Where("nickname LIKE ?", "%"+*opt.Nickname+"%")
 	}
 
+	if opt.QQ != nil {
+		query = query.Where("qq = ?", *opt.QQ)
+	}
+
 	if opt.IsAdmin != nil {
 		query = query.Where("is_admin = ?", *opt.IsAdmin)
 	}

@@ -1,3 +1,0 @@
-FAIL	poprako-main-server/tests [build failed]
-# poprako-main-server/tests [poprako-main-server/tests.test]
-.\integration_test.go:400:18: no new variables on left side of :=

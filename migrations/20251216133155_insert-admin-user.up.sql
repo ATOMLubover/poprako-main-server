@@ -16,7 +16,7 @@ INSERT INTO user_tbl(
     '019bbf6f-fa6b-7119-b1cd-c961a808c864',
     '3384539248',
     'TestAdmin',
-    '$2a$10$X9oqj6cUsLAl435VMKr2L.wWDsVE1rdFsTMmGgAt1x0Ppsz6w6SGu',
+    '$2a$10$EA6AJEOBejXnJFmEzfbopezyBjh4FDhmlmA5XyqoMGWijL.vuh1K2',
     TRUE,
     NOW(),
     NOW(),

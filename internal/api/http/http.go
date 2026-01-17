@@ -6,12 +6,15 @@ import (
 	"poprako-main-server/internal/state"
 
 	"github.com/kataras/iris/v12"
+	"github.com/kataras/iris/v12/middleware/logger"
 )
 
 func Run(appState state.AppState) {
 	// A default Iris application,
 	// with logger and recovery middleware already attached.
 	app := iris.Default()
+
+	app.Use(logger.New())
 
 	// Apply handlers to routes.
 	routeApp(app, &appState)
@@ -34,6 +37,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	users := api.Party("/users")
 	{
 		users.Get("", RetrieveUserInfos(appState))
+		users.Get("/me", GetCurrUserInfo(appState))
 		users.Get("/{user_id:string}", GetUserInfoByID(appState))
 		users.Post("/invite", InviteUser(appState))
 		users.Patch("/{user_id:string}/role", AssignUserRole(appState))
