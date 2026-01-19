@@ -6,6 +6,8 @@ import (
 
 	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/model/po"
+
+	"gorm.io/gorm"
 )
 
 // UserRepo defines the interface for user repository operations.
@@ -62,14 +64,19 @@ func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, erro
 	ub := &po.BasicUser{}
 
 	// Select last_assigned_at via subquery from comic assignment table.
-	selectStr := fmt.Sprintf("%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
-		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE)
+	selectStr := fmt.Sprintf(
+		"%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
+		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE,
+	)
 
 	if err := ex.
 		Select(selectStr).
 		Where("id = ?", userID).
 		First(ub).
 		Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, REC_NOT_FOUND
+		}
 		return nil, fmt.Errorf("Failed to get user by ID: %w", err)
 	}
 
@@ -91,6 +98,9 @@ func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
 		Where("qq = ?", qq).
 		First(ub).
 		Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, REC_NOT_FOUND
+		}
 		return nil, fmt.Errorf("Failed to get user by qq: %w", err)
 	}
 

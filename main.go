@@ -57,17 +57,19 @@ func initAppState(cfg config.AppCfg) state.AppState {
 	comicUnitRepo := repo.NewComicUnitRepo(ex)
 	comicAsgnRepo := repo.NewComicAsgnRepo(ex)
 	comicPageRepo := repo.NewComicPageRepo(ex)
+	invRepo := repo.NewInvitationRepo(ex)
 
 	// Create OSS client.
 	ossClient := oss.NewR2Client()
 
 	// Create services.
-	userSvc := svc.NewUserSvc(userRepo, jwtCodec)
+	userSvc := svc.NewUserSvc(userRepo, invRepo, jwtCodec)
 	comicSvc := svc.NewComicSvc(comicRepo, userRepo, comicAsgnRepo)
 	worksetSvc := svc.NewWorksetSvc(worksetRepo, userRepo)
 	comicUnitSvc := svc.NewComicUnitSvc(comicUnitRepo)
 	comicAsgnSvc := svc.NewComicAsgnSvc(comicAsgnRepo)
 	comicPageSvc := svc.NewComicPageSvc(comicPageRepo, comicRepo, ossClient)
+	invitationSvc := svc.NewInvitationSvc(invRepo, userRepo)
 
 	return state.NewAppState(
 		cfg,
@@ -78,6 +80,7 @@ func initAppState(cfg config.AppCfg) state.AppState {
 		comicUnitSvc,
 		comicAsgnSvc,
 		comicPageSvc,
+		invitationSvc,
 		ossClient,
 	)
 }

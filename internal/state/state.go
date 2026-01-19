@@ -11,15 +11,16 @@ import (
 )
 
 type AppState struct {
-	Cfg          config.AppCfg
-	JWTCodec     *jwtcodec.Codec
-	UserSvc      svc.UserSvc
-	ComicSvc     svc.ComicSvc
-	WorksetSvc   svc.WorksetSvc
-	ComicUnitSvc svc.ComicUnitSvc
-	ComicAsgnSvc svc.ComicAsgnSvc
-	ComicPageSvc svc.ComicPageSvc
-	OSSClient    oss.OSSClient
+	Cfg           config.AppCfg
+	JWTCodec      *jwtcodec.Codec
+	UserSvc       svc.UserSvc
+	ComicSvc      svc.ComicSvc
+	WorksetSvc    svc.WorksetSvc
+	ComicUnitSvc  svc.ComicUnitSvc
+	ComicAsgnSvc  svc.ComicAsgnSvc
+	ComicPageSvc  svc.ComicPageSvc
+	InvitationSvc svc.InvitationSvc
+	OSSClient     oss.OSSClient
 }
 
 func NewAppState(
@@ -31,17 +32,19 @@ func NewAppState(
 	comicUnitSvc svc.ComicUnitSvc,
 	comicAsgnSvc svc.ComicAsgnSvc,
 	comicPageSvc svc.ComicPageSvc,
+	invitationSvc svc.InvitationSvc,
 	ossClient oss.OSSClient,
 ) AppState {
 	return AppState{
-		Cfg:          cfg,
-		JWTCodec:     jwtCodec,
-		UserSvc:      userSvc,
-		ComicSvc:     comicSvc,
-		WorksetSvc:   worksetSvc,
-		ComicUnitSvc: comicUnitSvc,
-		ComicAsgnSvc: comicAsgnSvc,
-		ComicPageSvc: comicPageSvc,
-		OSSClient:    ossClient,
+		Cfg:           cfg,
+		JWTCodec:      jwtCodec,
+		UserSvc:       userSvc,
+		ComicSvc:      comicSvc,
+		WorksetSvc:    worksetSvc,
+		ComicUnitSvc:  comicUnitSvc,
+		ComicAsgnSvc:  comicAsgnSvc,
+		ComicPageSvc:  comicPageSvc,
+		InvitationSvc: invitationSvc,
+		OSSClient:     ossClient,
 	}
 }

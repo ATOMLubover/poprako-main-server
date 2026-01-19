@@ -39,6 +39,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		users.Get("", RetrieveUserInfos(appState))
 		users.Get("/me", GetCurrUserInfo(appState))
 		users.Get("/{user_id:string}", GetUserInfoByID(appState))
+		users.Get("/invitations", GetInvitations(appState))
 		users.Post("/invite", InviteUser(appState))
 		users.Patch("/{user_id:string}/role", AssignUserRole(appState))
 		users.Patch("/{user_id:string}", UpdateUserInfo(appState))

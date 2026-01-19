@@ -10,11 +10,11 @@ const (
 
 // Used when creating a new comic page.
 type NewComicPage struct {
-	ID      string `gorm:"column:id;primaryKey"`
-	ComicID string `gorm:"column:comic_id"`
-	Index   int64  `gorm:"column:index"`
-	OSSKey  string `gorm:"column:oss_key"`
-	Uploaded *bool `gorm:"column:uploaded"`
+	ID       string `gorm:"column:id;primaryKey"`
+	ComicID  string `gorm:"column:comic_id"`
+	Index    int64  `gorm:"column:index"`
+	OSSKey   string `gorm:"column:oss_key"`
+	Uploaded *bool  `gorm:"column:uploaded"`
 }
 
 // Used when retrieving basic comic page info.

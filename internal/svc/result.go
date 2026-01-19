@@ -62,6 +62,8 @@ const (
 	INVALID_ROLE_DATA SvcErr = "Invalid role data"
 	// Duplicate information (e.g., duplicate QQ).
 	// DUPLICATE_INFO SvcErr = "Duplicate information"
+	// User already in team.
+	USER_EXISTING SvcErr = "User already in team"
 )
 
 // Get a API error code for the ServError.
@@ -99,6 +101,8 @@ func (e *SvcErr) Code() uint16 {
 		return 400
 	// case DUPLICATE_INFO:
 	// 	return 400
+	case USER_EXISTING:
+		return 400
 	default:
 		return 500
 	}
@@ -141,6 +145,8 @@ func (e *SvcErr) Msg() string {
 		return "无效的任命数据"
 	// case DUPLICATE_INFO:
 	// 	return "信息已被占用"
+	case USER_EXISTING:
+		return "成员已在团队中"
 	default:
 		return "服务器内部错误"
 	}

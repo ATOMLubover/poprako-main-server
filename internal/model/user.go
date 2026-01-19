@@ -11,7 +11,7 @@ type UserInfo struct {
 	AssignedReviewerAt    *int64 `json:"assigned_reviewer_at"`
 	AssignedUploaderAt    *int64 `json:"assigned_uploader_at"`
 	IsAdmin               bool   `json:"is_admin"`
-	LastAssignedAt 	 *int64 `json:"last_assigned_at,omitempty"`
+	LastAssignedAt        *int64 `json:"last_assigned_at,omitempty"`
 	CreatedAt             int64  `json:"created_at"`
 }
 
@@ -30,14 +30,6 @@ type UpdateUserArgs struct {
 	UserID   string  `json:"user_id"`
 	QQ       *string `json:"qq,omitempty"`
 	Nickname *string `json:"nickname,omitempty"`
-}
-
-type InviteUserArgs struct {
-	InviteeQQ string `json:"invitee_qq"`
-}
-
-type InviteUserReply struct {
-	InvCode string `json:"invitation_code"`
 }
 
 type RetrieveUserOpt struct {

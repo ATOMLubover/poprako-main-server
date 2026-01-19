@@ -26,4 +26,4 @@ INSERT INTO user_tbl(
     NOW(),
     NOW(),
     NOW()
-);
+) ON CONFLICT (id) DO NOTHING;

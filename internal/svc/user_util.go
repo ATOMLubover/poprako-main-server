@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"poprako-main-server/internal/repo"
+
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -77,28 +79,19 @@ func (us *userSvc) genInvCode(decStr string) string {
 }
 
 // Check whether a invitation code is valid.
-func (us *userSvc) verifyInvCode(codeStr string) (string, error) {
-	us.mu.Lock()
-
-	if _, exists := us.invCodes[codeStr]; !exists {
-		// Invitation code does not exist.
-		us.mu.Unlock()
-
-		return "", errors.New("invitation code invalid")
+func (us *userSvc) verifyInvCode(code string, qq string) error {
+	invitation, err := us.invRepo.GetInvitationByQQ(nil, qq)
+	if err == repo.REC_NOT_FOUND {
+		return errors.New("invitation record not found")
 	}
-
-	// Mark the invitation code as used.
-	delete(us.invCodes, codeStr)
-
-	us.mu.Unlock()
-
-	// Decode invitation code: from hex string to dec string.
-	hexNum, err := strconv.ParseInt(codeStr, 16, 32)
 	if err != nil {
-		return "", errors.New("Failed to parse invitation code")
+		zap.L().Error("Failed to get invitation by qq during invitation code verification", zap.String("qq", qq), zap.Error(err))
+		return err
 	}
 
-	decStr := strconv.FormatInt(hexNum, 10)
+	if invitation.InvCode != code {
+		return errors.New("invitation code does not match")
+	}
 
-	return decStr, nil
+	return nil
 }

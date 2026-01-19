@@ -17,7 +17,6 @@ type UserSvc interface {
 	GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcErr)
 	GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr)
 
-	InviteUser(operUserID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr)
 	LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr)
 
 	UpdateUserInfo(args model.UpdateUserArgs) SvcErr
@@ -27,21 +26,33 @@ type UserSvc interface {
 }
 
 type userSvc struct {
-	repo repo.UserRepo
-	jwt  *jwtcodec.Codec
+	repo    repo.UserRepo
+	invRepo repo.InvitationRepo
+	jwt     *jwtcodec.Codec
 
 	mu       sync.Mutex
 	invCodes map[string]struct{}
 }
 
 // NewUserSvc creates a new UserSvc. If r is nil, the default repo implementation is used.
-func NewUserSvc(r repo.UserRepo, jwt *jwtcodec.Codec) UserSvc {
+func NewUserSvc(
+	r repo.UserRepo,
+	ir repo.InvitationRepo,
+	jwt *jwtcodec.Codec,
+) UserSvc {
 	if r == nil {
 		panic("UserRepo cannot be nil")
+	}
+	if ir == nil {
+		panic("InvitationRepo cannot be nil")
+	}
+	if jwt == nil {
+		panic("JWT Codec cannot be nil")
 	}
 
 	return &userSvc{
 		repo:     r,
+		invRepo:  ir,
 		jwt:      jwt,
 		invCodes: make(map[string]struct{}),
 	}
@@ -121,97 +132,10 @@ func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) 
 // Get or create user during login.
 func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr) {
 	if args.InvCode != "" {
-		// If invitation code is provided, validate it.
-		// This happens when a new user is trying to register.
-
-		invCode, err := us.verifyInvCode(args.InvCode)
-		if err != nil {
-			zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
-		}
-
-		if invCode != args.QQ {
-			zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
-			return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
-		}
-
-		// Verification passed.
-
-		newPwdHash, err := us.hashPwd(args.Password)
-		if err != nil {
-			zap.L().Error("Failed to hash password during user login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, PWD_HASH_FAILURE
-		}
-
-		// zap.L().Debug(
-		// 	"test for register pwd hash",
-		// 	zap.String("hash", newPwdHash),
-		// 	zap.Any("raw", args),
-		// )
-
-		newID, err := genUUID()
-		if err != nil {
-			zap.L().Error("Failed to generate UUID during user login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, ID_GEN_FAILURE
-		}
-
-		// Use placeholder for nickname if args.Nickname is empty.
-		if args.Nickname == "" {
-			args.Nickname = "OvO_" + newID[:8]
-		}
-
-		newUser := &po.NewUser{
-			ID:           newID,
-			QQ:           args.QQ,
-			Nickname:     args.Nickname,
-			PasswordHash: newPwdHash,
-		}
-
-		// The insertion may fail due to UNIQUE qq constraint violation.
-		// This is expected and acceptable in concurrent login scenarios.
-		if err := us.repo.CreateUser(nil, newUser); err != nil {
-			zap.L().Error("Failed to create new user during login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, DB_FAILURE
-		}
-
-		// Creation succeeded, generate JWT token for the new user.
-		// ID is automatically populated after creation.
-		token, err := us.genJWT(newUser.ID)
-		if err != nil {
-			zap.L().Error("Failed to generate JWT for new user during login", zap.String("qq", args.QQ), zap.Error(err))
-			return SvcRslt[model.LoginReply]{}, DB_FAILURE
-		}
-
-		return accept(200, model.LoginReply{Token: token}), NO_ERROR
+		return us.registerUser(args)
 	}
 
-	// No invitation code provided, treat as existing user login.
-
-	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
-	if err != nil {
-		zap.L().Warn("Failed to get password hash during user login", zap.String("qq", args.QQ), zap.Error(err))
-		return SvcRslt[model.LoginReply]{}, DB_FAILURE
-	}
-
-	// zap.L().Debug(
-	// 	"test for login",
-	// 	zap.Any("secret", secret),
-	// 	zap.Any("raw", args),
-	// )
-
-	// If the user exists, verify the password.
-	if !us.verifyPwd(secret.PwdHash, args.Password) {
-		return SvcRslt[model.LoginReply]{}, PWD_MISMATCH
-	}
-
-	// Verification succeeded, generate JWT token for the existing user.
-	token, err := us.genJWT(secret.ID)
-	if err != nil {
-		zap.L().Error("Failed to generate JWT for existing user during login", zap.String("qq", args.QQ), zap.Error(err))
-		return SvcRslt[model.LoginReply]{}, DB_FAILURE
-	}
-
-	return accept(200, model.LoginReply{Token: token}), NO_ERROR
+	return us.loginUser(args)
 }
 
 // Update user info by user ID.
@@ -228,29 +152,6 @@ func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 	}
 
 	return NO_ERROR
-}
-
-func (us *userSvc) InviteUser(opID string, args model.InviteUserArgs) (SvcRslt[model.InviteUserReply], SvcErr) {
-	opBasic, err := us.repo.GetUserByID(nil, opID)
-	if err != nil {
-		zap.L().Error("Failed to get user basics by ID during invitation", zap.String("userID", opID), zap.Error(err))
-		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
-	}
-
-	// Check whether operator is admin.
-	if !opBasic.IsAdmin {
-		zap.L().Warn("Non-admin user attempted to invite user", zap.String("userID", opID))
-		return SvcRslt[model.InviteUserReply]{}, PERMISSION_DENIED
-	}
-
-	// Generate invitation code.
-	invCode := us.genInvCode(args.InviteeQQ)
-	if invCode == "" {
-		zap.L().Error("Failed to generate invitation code", zap.String("inviteeQQ", args.InviteeQQ))
-		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
-	}
-
-	return accept(200, model.InviteUserReply{InvCode: invCode}), NO_ERROR
 }
 
 func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.UserInfo], SvcErr) {
@@ -394,4 +295,81 @@ func (us *userSvc) AssignUserRole(
 	}
 
 	return NO_ERROR
+}
+
+func (us *userSvc) registerUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr) {
+	// If invitation code is provided, validate it.
+	// This happens when a new user is trying to register.
+
+	if err := us.verifyInvCode(args.InvCode, args.QQ); err != nil {
+		zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
+	}
+
+	// Verification passed.
+
+	newPwdHash, err := us.hashPwd(args.Password)
+	if err != nil {
+		zap.L().Error("Failed to hash password during user login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, PWD_HASH_FAILURE
+	}
+
+	newID, err := genUUID()
+	if err != nil {
+		zap.L().Error("Failed to generate UUID during user login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, ID_GEN_FAILURE
+	}
+
+	// Use placeholder for nickname if args.Nickname is empty.
+	if args.Nickname == "" {
+		args.Nickname = "OvO_" + newID[:8]
+	}
+
+	newUser := &po.NewUser{
+		ID:           newID,
+		QQ:           args.QQ,
+		Nickname:     args.Nickname,
+		PasswordHash: newPwdHash,
+	}
+
+	// The insertion may fail due to UNIQUE qq constraint violation.
+	// This is expected and acceptable in concurrent login scenarios.
+	if err := us.repo.CreateUser(nil, newUser); err != nil {
+		zap.L().Error("Failed to create new user during login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
+	}
+
+	// Creation succeeded, generate JWT token for the new user.
+	// ID is automatically populated after creation.
+	token, err := us.genJWT(newUser.ID)
+	if err != nil {
+		zap.L().Error("Failed to generate JWT for new user during login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
+	}
+
+	return accept(200, model.LoginReply{Token: token}), NO_ERROR
+}
+
+func (us *userSvc) loginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], SvcErr) {
+	// No invitation code provided, treat as existing user login.
+
+	secret, err := us.repo.GetSecretUserByQQ(nil, args.QQ)
+	if err != nil {
+		zap.L().Warn("Failed to get password hash during user login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
+	}
+
+	// If the user exists, verify the password.
+	if !us.verifyPwd(secret.PwdHash, args.Password) {
+		return SvcRslt[model.LoginReply]{}, PWD_MISMATCH
+	}
+
+	// Verification succeeded, generate JWT token for the existing user.
+	token, err := us.genJWT(secret.ID)
+	if err != nil {
+		zap.L().Error("Failed to generate JWT for existing user during login", zap.String("qq", args.QQ), zap.Error(err))
+		return SvcRslt[model.LoginReply]{}, DB_FAILURE
+	}
+
+	return accept(200, model.LoginReply{Token: token}), NO_ERROR
 }

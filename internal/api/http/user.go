@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+
 	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/state"
 	"poprako-main-server/internal/svc"
@@ -83,7 +84,7 @@ func UpdateUserInfo(appState *state.AppState) iris.Handler {
 
 func InviteUser(appState *state.AppState) iris.Handler {
 	return func(ctx iris.Context) {
-		var args model.InviteUserArgs
+		var args model.CreateInvitationArgs
 
 		if err := ctx.ReadJSON(&args); err != nil {
 			reject(ctx, iris.StatusBadRequest, "请求体格式错误")
@@ -96,7 +97,25 @@ func InviteUser(appState *state.AppState) iris.Handler {
 			return
 		}
 
-		res, err := appState.UserSvc.InviteUser(opID, args)
+		res, err := appState.InvitationSvc.CreateInvitation(opID, args)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		accept(ctx, res)
+	}
+}
+
+func GetInvitations(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		opID := ctx.Values().GetString("user_id")
+		if opID == "" {
+			reject(ctx, iris.StatusUnauthorized, "未认证用户")
+			return
+		}
+
+		res, err := appState.InvitationSvc.GetInvitationInfos(opID)
 		if err != svc.NO_ERROR {
 			reject(ctx, err.Code(), err.Msg())
 			return
@@ -122,7 +141,7 @@ func LoginUser(appState *state.AppState) iris.Handler {
 		}
 
 		ctx.SetCookie(&http.Cookie{
-			Name: "Authorization",
+			Name:  "Authorization",
 			Value: fmt.Sprintf("Bearer %s", res.Data.Token),
 		})
 
