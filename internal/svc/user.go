@@ -56,6 +56,7 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 	}
 
 	userInfo := model.UserInfo{
+		QQ:        userBasic.QQ,
 		UserID:    userBasic.ID,
 		IsAdmin:   userBasic.IsAdmin,
 		Nickname:  userBasic.Nickname,
@@ -86,6 +87,11 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 		userInfo.AssignedUploaderAt = &ts
 	}
 
+	if userBasic.LastAssignedAt != nil {
+		ts := userBasic.LastAssignedAt.Unix()
+		userInfo.LastAssignedAt = &ts
+	}
+
 	return accept(200, userInfo), NO_ERROR
 }
 
@@ -98,9 +104,15 @@ func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) 
 	}
 
 	userInfo := model.UserInfo{
+		QQ:        userBasics.QQ,
 		UserID:    userBasics.ID,
 		Nickname:  userBasics.Nickname,
 		CreatedAt: userBasics.CreatedAt.Unix(),
+	}
+
+	if userBasics.LastAssignedAt != nil {
+		ts := userBasics.LastAssignedAt.Unix()
+		userInfo.LastAssignedAt = &ts
 	}
 
 	return accept(200, userInfo), NO_ERROR
@@ -112,16 +124,16 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 		// If invitation code is provided, validate it.
 		// This happens when a new user is trying to register.
 
-		// invCode, err := us.verifyInvCode(args.InvCode)
-		// if err != nil {
-		// 	zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
-		// 	return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
-		// }
+		invCode, err := us.verifyInvCode(args.InvCode)
+		if err != nil {
+			zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
+			return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
+		}
 
-		// if invCode != args.QQ {
-		// 	zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
-		// 	return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
-		// }
+		if invCode != args.QQ {
+			zap.L().Error("Invitation is not corresponding with qq", zap.String("invCode", invCode), zap.String("qq", args.QQ))
+			return SvcRslt[model.LoginReply]{}, INV_CODE_MISMATCH
+		}
 
 		// Verification passed.
 
@@ -131,11 +143,11 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 			return SvcRslt[model.LoginReply]{}, PWD_HASH_FAILURE
 		}
 
-		zap.L().Debug(
-			"test for register pwd hash",
-			zap.String("hash", newPwdHash),
-			zap.Any("raw", args),
-		)
+		// zap.L().Debug(
+		// 	"test for register pwd hash",
+		// 	zap.String("hash", newPwdHash),
+		// 	zap.Any("raw", args),
+		// )
 
 		newID, err := genUUID()
 		if err != nil {
@@ -181,11 +193,11 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
 
-	zap.L().Debug(
-		"test for login",
-		zap.Any("secret", secret),
-		zap.Any("raw", args),
-	)
+	// zap.L().Debug(
+	// 	"test for login",
+	// 	zap.Any("secret", secret),
+	// 	zap.Any("raw", args),
+	// )
 
 	// If the user exists, verify the password.
 	if !us.verifyPwd(secret.PwdHash, args.Password) {
@@ -232,9 +244,9 @@ func (us *userSvc) InviteUser(opID string, args model.InviteUserArgs) (SvcRslt[m
 	}
 
 	// Generate invitation code.
-	invCode := us.genInvCode(args.InviteeID)
+	invCode := us.genInvCode(args.InviteeQQ)
 	if invCode == "" {
-		zap.L().Error("Failed to generate invitation code", zap.String("inviteeID", args.InviteeID))
+		zap.L().Error("Failed to generate invitation code", zap.String("inviteeQQ", args.InviteeQQ))
 		return SvcRslt[model.InviteUserReply]{}, DB_FAILURE
 	}
 
@@ -281,6 +293,11 @@ func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.User
 		if ub.AssignedUploaderAt != nil {
 			ts := ub.AssignedUploaderAt.Unix()
 			ui.AssignedUploaderAt = &ts
+		}
+
+		if ub.LastAssignedAt != nil {
+			ts := ub.LastAssignedAt.Unix()
+			ui.LastAssignedAt = &ts
 		}
 
 		userInfos = append(userInfos, ui)

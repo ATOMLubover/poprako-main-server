@@ -1,6 +1,8 @@
 package http
 
 import (
+	"fmt"
+	"net/http"
 	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/state"
 	"poprako-main-server/internal/svc"
@@ -118,6 +120,11 @@ func LoginUser(appState *state.AppState) iris.Handler {
 			reject(ctx, err.Code(), err.Msg())
 			return
 		}
+
+		ctx.SetCookie(&http.Cookie{
+			Name: "Authorization",
+			Value: fmt.Sprintf("Bearer %s", res.Data.Token),
+		})
 
 		accept(ctx, res)
 	}

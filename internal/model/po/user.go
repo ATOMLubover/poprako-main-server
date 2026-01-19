@@ -32,9 +32,16 @@ type BasicUser struct {
 	AssignedReviewerAt    *time.Time `gorm:"column:assigned_reviewer_at"`
 	AssignedUploaderAt    *time.Time `gorm:"column:assigned_uploader_at"`
 
+	// LastAssignedAt is populated by a subquery selecting the most recent
+	// assignment `created_at` from the comic assignment table for this user.
+	// It does not exist as a real column on the user table.
+	LastAssignedAt *time.Time `gorm:"column:last_assigned_at"`
+
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 }
+
+// Added LastAssignedAt field below
 
 // Used when login.
 type SecretUser struct {

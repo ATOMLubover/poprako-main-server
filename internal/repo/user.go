@@ -61,7 +61,12 @@ func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, erro
 
 	ub := &po.BasicUser{}
 
+	// Select last_assigned_at via subquery from comic assignment table.
+	selectStr := fmt.Sprintf("%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
+		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE)
+
 	if err := ex.
+		Select(selectStr).
 		Where("id = ?", userID).
 		First(ub).
 		Error; err != nil {
@@ -78,7 +83,11 @@ func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
 
 	ub := &po.BasicUser{}
 
+	selectStr := fmt.Sprintf("%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
+		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE)
+
 	if err := ex.
+		Select(selectStr).
 		Where("qq = ?", qq).
 		First(ub).
 		Error; err != nil {
@@ -188,7 +197,11 @@ func (ur *userRepo) RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.
 
 	var users []po.BasicUser
 
-	query := ex
+	// include last_assigned_at via subquery
+	selectStr := fmt.Sprintf("%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
+		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE)
+
+	query := ex.Select(selectStr)
 
 	if opt.Nickname != nil {
 		query = query.Where("nickname LIKE ?", "%"+*opt.Nickname+"%")
