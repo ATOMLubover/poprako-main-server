@@ -165,7 +165,7 @@ func poAsgnToModelAsgn(asgn *po.BasicComicAsgn) model.ComicAsgnInfo {
 // modelAsgnArgsToPoPatch converts model.UpdateComicAsgnArgs to po.PatchComicAsgn
 func modelAsgnArgsToPoPatch(args model.UpdateComicAsgnArgs) po.PatchComicAsgn {
 	patch := po.PatchComicAsgn{
-		ID: args.AsgnID,
+		ID: args.ID,
 	}
 
 	now := time.Now()

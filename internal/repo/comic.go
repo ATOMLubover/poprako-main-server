@@ -86,7 +86,9 @@ func (cr *comicRepo) GetComicByID(ex Executor, comicID string) (*po.BasicComic, 
 
 	if err := ex.
 		Model(&po.BasicComic{}).
-		Select("comic_tbl.*, workset_tbl.index AS workset_index, user_tbl.nickname AS creator_nickname").
+		Select(`comic_tbl.*, 
+			workset_tbl.index AS workset_index, 
+			user_tbl.nickname AS creator_nickname`).
 		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id").
 		Joins("LEFT JOIN user_tbl ON comic_tbl.creator_id = user_tbl.id").
 		Where("comic_tbl.id = ?", comicID).
@@ -104,7 +106,8 @@ func (cr *comicRepo) GetComicsByWorksetID(ex Executor, worksetID string, offset,
 	var lst []po.BriefComic
 
 	q := ex.Model(&po.BriefComic{}).
-		Select("comic_tbl.*, workset_tbl.index AS workset_index").
+		Select(`comic_tbl.*, 
+			workset_tbl.index AS workset_index`).
 		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id").
 		Where("comic_tbl.workset_id = ?", worksetID)
 
@@ -172,9 +175,6 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 	if patchComic.PageCount != nil {
 		updates["page_count"] = *patchComic.PageCount
-	}
-	if patchComic.LikesCount != nil {
-		updates["likes_count"] = *patchComic.LikesCount
 	}
 
 	if patchComic.TranslatingStartedAt != nil {
@@ -256,7 +256,8 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 	var lst []po.BriefComic
 
 	query := ex.Model(&po.BriefComic{}).
-		Select("comic_tbl.*, workset_tbl.index AS workset_index").
+		Select(`comic_tbl.*, 
+			workset_tbl.index AS workset_index`).
 		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id")
 
 	if opt.Author != nil {
@@ -320,7 +321,11 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 	}
 
 	if opt.AssignedUserID != nil {
-		query = query.Where("comic_tbl.assigned_user_id LIKE ?", "%"+*opt.AssignedUserID+"%")
+		query = query.Where(`EXISTS (
+			SELECT 1 FROM comic_assignment_tbl 
+			WHERE comic_assignment_tbl.comic_id = comic_tbl.id 
+			AND comic_assignment_tbl.user_id = ?
+		)`, *opt.AssignedUserID)
 	}
 
 	if opt.Offset > 0 {

@@ -6,6 +6,11 @@ type ComicPageInfo struct {
 	Index    int64  `json:"index"`
 	OSSURL   string `json:"oss_url"`
 	Uploaded bool   `json:"uploaded"`
+
+	InboxUnitCount 	int64 `json:"inbox_unit_count"` 
+	OutboxUnitCount int64 `json:"outbox_unit_count"`
+	TranslatedUnitCount int64 `json:"translated_unit_count"`
+	ProvedUnitCount int64 `json:"proved_unit_count"`
 }
 
 type CreateComicPageArgs struct {

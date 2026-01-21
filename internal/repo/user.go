@@ -63,15 +63,9 @@ func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, erro
 
 	ub := &po.BasicUser{}
 
-	// Select last_assigned_at via subquery from comic assignment table.
-	selectStr := fmt.Sprintf(
-		"%s.*, (SELECT MAX(created_at) FROM %s WHERE user_id = %s.id) as last_assigned_at",
-		po.USER_TABLE, po.COMIC_ASSIGNMENT_TABLE, po.USER_TABLE,
-	)
-
 	if err := ex.
-		Select(selectStr).
 		Where("id = ?", userID).
+		Order("updated_at DESC").
 		First(ub).
 		Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

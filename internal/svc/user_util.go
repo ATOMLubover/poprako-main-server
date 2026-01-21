@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/repo"
 
 	"go.uber.org/zap"
@@ -79,19 +80,29 @@ func (us *userSvc) genInvCode(decStr string) string {
 }
 
 // Check whether a invitation code is valid.
-func (us *userSvc) verifyInvCode(code string, qq string) error {
+func (us *userSvc) verifyInvCode(code string, qq string) (*model.InvitationInfo, error) {
 	invitation, err := us.invRepo.GetInvitationByQQ(nil, qq)
 	if err == repo.REC_NOT_FOUND {
-		return errors.New("invitation record not found")
+		return nil, errors.New("invitation record not found")
 	}
 	if err != nil {
 		zap.L().Error("Failed to get invitation by qq during invitation code verification", zap.String("qq", qq), zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	if invitation.InvCode != code {
-		return errors.New("invitation code does not match")
+		return nil, errors.New("invitation code does not match")
 	}
 
-	return nil
+	return &model.InvitationInfo{
+		InvitorID:         invitation.InvitorID,
+		InviteeQQ:         invitation.InviteeQQ,
+		Pending:           invitation.Pending,
+		AssignTranslator:  invitation.AssignTranslator,
+		AssignProofreader: invitation.AssignProofreader,
+		AssignTypesetter:  invitation.AssignTypesetter,
+		AssignRedrawer:    invitation.AssignRedrawer,
+		AssignReviewer:    invitation.AssignReviewer,
+		AssignUploader:    invitation.AssignUploader,
+	}, nil
 }

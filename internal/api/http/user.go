@@ -65,7 +65,7 @@ func UpdateUserInfo(appState *state.AppState) iris.Handler {
 		}
 
 		// Check user-id consistency.
-		if userID != args.UserID {
+		if userID != args.ID {
 			reject(ctx, iris.StatusBadRequest, "路径参数 user-id 与请求体内 user_id 不匹配")
 			return
 		}
@@ -189,7 +189,7 @@ func AssignUserRole(appState *state.AppState) iris.Handler {
 			return
 		}
 
-		if userID != args.UserID {
+		if userID != args.ID {
 			reject(ctx, iris.StatusBadRequest, "路径参数 user_id 与请求体内 user_id 不匹配")
 			return
 		}

@@ -16,6 +16,13 @@ type NewUser struct {
 	QQ           string `gorm:"column:qq"`
 	Nickname     string `gorm:"column:nickname"`
 	PasswordHash string `gorm:"column:password_hash"`
+
+	AssignedTranslatorAt  *time.Time `gorm:"column:assigned_translator_at"`
+	AssignedProofreaderAt *time.Time `gorm:"column:assigned_proofreader_at"`
+	AssignedTypesetterAt  *time.Time `gorm:"column:assigned_typesetter_at"`
+	AssignedRedrawerAt    *time.Time `gorm:"column:assigned_redrawer_at"`
+	AssignedReviewerAt    *time.Time `gorm:"column:assigned_reviewer_at"`
+	AssignedUploaderAt    *time.Time `gorm:"column:assigned_uploader_at"`
 }
 
 // Used when retrieving basic user info.
@@ -31,11 +38,6 @@ type BasicUser struct {
 	AssignedRedrawerAt    *time.Time `gorm:"column:assigned_redrawer_at"`
 	AssignedReviewerAt    *time.Time `gorm:"column:assigned_reviewer_at"`
 	AssignedUploaderAt    *time.Time `gorm:"column:assigned_uploader_at"`
-
-	// LastAssignedAt is populated by a subquery selecting the most recent
-	// assignment `created_at` from the comic assignment table for this user.
-	// It does not exist as a real column on the user table.
-	LastAssignedAt *time.Time `gorm:"column:last_assigned_at"`
 
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`

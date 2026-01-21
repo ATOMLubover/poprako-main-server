@@ -66,6 +66,7 @@ func (cs *comicSvc) GetComicInfoByID(comicID string) (SvcRslt[model.ComicInfo], 
 		Title:           basic.Title,
 		Description:     basic.Description,
 		Comment:         basic.Comment,
+		PageCount:       basic.PageCount,
 		CreatedAt:       basic.CreatedAt.Unix(),
 		UpdatedAt:       basic.UpdatedAt.Unix(),
 	}
@@ -101,6 +102,7 @@ func (cs *comicSvc) GetComicBriefsByWorksetID(worksetID string, offset, limit in
 			Index:        cb.Index,
 			Author:       cb.Author,
 			Title:        cb.Title,
+			PageCount:    cb.PageCount,
 		}
 
 		// Handle optional timestamp fields
@@ -135,6 +137,7 @@ func (cs *comicSvc) RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.
 			Index:        cb.Index,
 			Author:       cb.Author,
 			Title:        cb.Title,
+			PageCount:    cb.PageCount,
 		}
 
 		// Handle optional timestamp fields

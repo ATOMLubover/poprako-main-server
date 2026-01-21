@@ -3,7 +3,7 @@ package model
 type ComicUnitInfo struct {
 	ID string `json:"id"`
 
-	PageID string `json:"comic_id"`
+	PageID string `json:"page_id"`
 	Index  int64  `json:"index"`
 
 	XCoordinate float64 `json:"x_coordinate"`

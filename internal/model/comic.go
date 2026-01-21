@@ -10,6 +10,8 @@ type ComicBrief struct {
 	Author string `json:"author"`
 	Title  string `json:"title"`
 
+	PageCount int64 `json:"page_count"`
+
 	TranslatingStartedAt    *int64 `json:"translating_started_at"`
 	TranslatingCompletedAt  *int64 `json:"translating_completed_at"`
 	ProofreadingStartedAt   *int64 `json:"proofreading_started_at"`
@@ -34,6 +36,8 @@ type ComicInfo struct {
 	Title       string  `json:"title"`
 	Description *string `json:"description,omitempty"`
 	Comment     *string `json:"comment,omitempty"`
+
+	PageCount int64 `json:"page_count"`
 
 	TranslatingStartedAt    *int64 `json:"translating_started_at"`
 	TranslatingCompletedAt  *int64 `json:"translating_completed_at"`
@@ -77,7 +81,7 @@ type RetrieveComicOpt struct {
 	UploadingNotStarted *bool `url:"ul_pending,omitempty"`
 	UploadingCompleted  *bool `url:"ul_fin,omitempty"`
 
-	// Fuzzy
+	// Accurate.
 	AssignedUserID *string `url:"auid,omitempty"`
 
 	Offset int `url:"offset"`

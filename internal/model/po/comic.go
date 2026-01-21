@@ -32,6 +32,8 @@ type BriefComic struct {
 	Author string `gorm:"column:author"`
 	Title  string `gorm:"column:title"`
 
+	PageCount int64 `gorm:"column:page_count"`
+
 	TranslatingStartedAt    *time.Time `gorm:"column:translating_started_at"`
 	TranslatingCompletedAt  *time.Time `gorm:"column:translating_completed_at"`
 	ProofreadingStartedAt   *time.Time `gorm:"column:proofreading_started_at"`
@@ -58,8 +60,7 @@ type BasicComic struct {
 	Comment     *string `gorm:"column:comment"`
 	Description *string `gorm:"column:description"`
 
-	PageCount  int64 `gorm:"column:page_count"`
-	LikesCount int64 `gorm:"column:likes_count"`
+	PageCount int64 `gorm:"column:page_count"`
 
 	TranslatingStartedAt    *time.Time `gorm:"column:translating_started_at"`
 	TranslatingCompletedAt  *time.Time `gorm:"column:translating_completed_at"`
@@ -87,8 +88,7 @@ type PatchComic struct {
 	Comment     *string `gorm:"column:comment"`
 	Description *string `gorm:"column:description"`
 
-	PageCount  *int64 `gorm:"column:page_count"`
-	LikesCount *int64 `gorm:"column:likes_count"`
+	PageCount *int64 `gorm:"column:page_count"`
 
 	TranslatingStartedAt    *time.Time `gorm:"column:translating_started_at"`
 	TranslatingCompletedAt  *time.Time `gorm:"column:translating_completed_at"`

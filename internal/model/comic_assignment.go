@@ -24,7 +24,7 @@ type CreateComicAsgnArgs struct {
 }
 
 type UpdateComicAsgnArgs struct {
-	AsgnID        string `json:"asgn_id"`
+	ID            string `json:"id"`
 	IsTranslator  *bool  `json:"is_translator,omitempty"`
 	IsProofreader *bool  `json:"is_proofreader,omitempty"`
 	IsTypesetter  *bool  `json:"is_typesetter,omitempty"`

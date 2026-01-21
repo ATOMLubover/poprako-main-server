@@ -68,7 +68,7 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 
 	userInfo := model.UserInfo{
 		QQ:        userBasic.QQ,
-		UserID:    userBasic.ID,
+		ID:        userBasic.ID,
 		IsAdmin:   userBasic.IsAdmin,
 		Nickname:  userBasic.Nickname,
 		CreatedAt: userBasic.CreatedAt.Unix(),
@@ -98,11 +98,6 @@ func (us *userSvc) GetUserInfoByID(userID string) (SvcRslt[model.UserInfo], SvcE
 		userInfo.AssignedUploaderAt = &ts
 	}
 
-	if userBasic.LastAssignedAt != nil {
-		ts := userBasic.LastAssignedAt.Unix()
-		userInfo.LastAssignedAt = &ts
-	}
-
 	return accept(200, userInfo), NO_ERROR
 }
 
@@ -116,14 +111,9 @@ func (us *userSvc) GetUserInfoByQQ(qq string) (SvcRslt[model.UserInfo], SvcErr) 
 
 	userInfo := model.UserInfo{
 		QQ:        userBasics.QQ,
-		UserID:    userBasics.ID,
+		ID:        userBasics.ID,
 		Nickname:  userBasics.Nickname,
 		CreatedAt: userBasics.CreatedAt.Unix(),
-	}
-
-	if userBasics.LastAssignedAt != nil {
-		ts := userBasics.LastAssignedAt.Unix()
-		userInfo.LastAssignedAt = &ts
 	}
 
 	return accept(200, userInfo), NO_ERROR
@@ -141,13 +131,13 @@ func (us *userSvc) LoginUser(args model.LoginArgs) (SvcRslt[model.LoginReply], S
 // Update user info by user ID.
 func (us *userSvc) UpdateUserInfo(args model.UpdateUserArgs) SvcErr {
 	updateUser := &po.PatchUser{
-		ID:       args.UserID,
+		ID:       args.ID,
 		QQ:       args.QQ,
 		Nickname: args.Nickname,
 	}
 
 	if err := us.repo.UpdateUserByID(nil, updateUser); err != nil {
-		zap.L().Error("Failed to update user info", zap.String("userID", args.UserID), zap.Error(err))
+		zap.L().Error("Failed to update user info", zap.String("userID", args.ID), zap.Error(err))
 		return DB_FAILURE
 	}
 
@@ -165,7 +155,7 @@ func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.User
 
 	for _, ub := range userBasics {
 		ui := model.UserInfo{
-			UserID:    ub.ID,
+			ID:        ub.ID,
 			QQ:        ub.QQ,
 			IsAdmin:   ub.IsAdmin,
 			Nickname:  ub.Nickname,
@@ -194,11 +184,6 @@ func (us *userSvc) GetUserInfos(opt model.RetrieveUserOpt) (SvcRslt[[]model.User
 		if ub.AssignedUploaderAt != nil {
 			ts := ub.AssignedUploaderAt.Unix()
 			ui.AssignedUploaderAt = &ts
-		}
-
-		if ub.LastAssignedAt != nil {
-			ts := ub.LastAssignedAt.Unix()
-			ui.LastAssignedAt = &ts
 		}
 
 		userInfos = append(userInfos, ui)
@@ -283,14 +268,14 @@ func (us *userSvc) AssignUserRole(
 	}
 
 	if !hasChange {
-		zap.L().Warn("No valid role changes in AssignUserRole", zap.String("userID", args.UserID), zap.Any("roles", roles))
+		zap.L().Warn("No valid role changes in AssignUserRole", zap.String("userID", args.ID), zap.Any("roles", roles))
 		return INVALID_ROLE_DATA
 	}
 
-	patch.ID = args.UserID
+	patch.ID = args.ID
 
 	if err := us.repo.UpdateUserByID(nil, &patch); err != nil {
-		zap.L().Error("Failed to update user roles in AssignUserRole", zap.String("userID", args.UserID), zap.Error(err))
+		zap.L().Error("Failed to update user roles in AssignUserRole", zap.String("userID", args.ID), zap.Error(err))
 		return DB_FAILURE
 	}
 
@@ -301,7 +286,8 @@ func (us *userSvc) registerUser(args model.LoginArgs) (SvcRslt[model.LoginReply]
 	// If invitation code is provided, validate it.
 	// This happens when a new user is trying to register.
 
-	if err := us.verifyInvCode(args.InvCode, args.QQ); err != nil {
+	invitation, err := us.verifyInvCode(args.InvCode, args.QQ)
+	if err != nil || invitation == nil {
 		zap.L().Warn("Invalid invitation code during user login", zap.String("invCode", args.InvCode), zap.Error(err))
 		return SvcRslt[model.LoginReply]{}, INV_CODE_INVALID
 	}
@@ -330,6 +316,27 @@ func (us *userSvc) registerUser(args model.LoginArgs) (SvcRslt[model.LoginReply]
 		QQ:           args.QQ,
 		Nickname:     args.Nickname,
 		PasswordHash: newPwdHash,
+	}
+
+	now := time.Now()
+
+	if invitation.AssignTranslator {
+		newUser.AssignedTranslatorAt = &now
+	}
+	if invitation.AssignProofreader {
+		newUser.AssignedProofreaderAt = &now
+	}
+	if invitation.AssignTypesetter {
+		newUser.AssignedTypesetterAt = &now
+	}
+	if invitation.AssignRedrawer {
+		newUser.AssignedRedrawerAt = &now
+	}
+	if invitation.AssignReviewer {
+		newUser.AssignedReviewerAt = &now
+	}
+	if invitation.AssignUploader {
+		newUser.AssignedUploaderAt = &now
 	}
 
 	// The insertion may fail due to UNIQUE qq constraint violation.

@@ -116,7 +116,7 @@ func UpdateAsgn(appState *state.AppState) iris.Handler {
 			return
 		}
 
-		args.AsgnID = asgnID
+		args.ID = asgnID
 
 		err := appState.ComicAsgnSvc.UpdateAsgnByID(args)
 		if err != svc.NO_ERROR {

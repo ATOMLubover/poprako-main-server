@@ -1,7 +1,7 @@
 package model
 
 type UserInfo struct {
-	UserID                string `json:"user_id"`
+	ID                    string `json:"id"`
 	QQ                    string `json:"qq"`
 	Nickname              string `json:"nickname"`
 	AssignedTranslatorAt  *int64 `json:"assigned_translator_at"`
@@ -11,7 +11,6 @@ type UserInfo struct {
 	AssignedReviewerAt    *int64 `json:"assigned_reviewer_at"`
 	AssignedUploaderAt    *int64 `json:"assigned_uploader_at"`
 	IsAdmin               bool   `json:"is_admin"`
-	LastAssignedAt        *int64 `json:"last_assigned_at,omitempty"`
 	CreatedAt             int64  `json:"created_at"`
 }
 
@@ -27,7 +26,7 @@ type LoginReply struct {
 }
 
 type UpdateUserArgs struct {
-	UserID   string  `json:"user_id"`
+	ID       string  `json:"id"`
 	QQ       *string `json:"qq,omitempty"`
 	Nickname *string `json:"nickname,omitempty"`
 }
@@ -56,6 +55,6 @@ type RoleAssignment struct {
 }
 
 type AssignUserRoleArgs struct {
-	UserID string           `json:"user_id"`
-	Roles  []RoleAssignment `json:"roles"`
+	ID    string           `json:"id"`
+	Roles []RoleAssignment `json:"roles"`
 }
