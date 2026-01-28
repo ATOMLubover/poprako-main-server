@@ -45,6 +45,17 @@ func (cr *comicRepo) withTrx(tx Executor) Executor {
 
 func (cr *comicRepo) CreateComic(newComic *po.NewComic) error {
 	if err := cr.Exec().Transaction(func(ex Executor) error {
+		// Query workset index
+		var workset po.DetailedWorkset
+		if err := ex.Model(&po.DetailedWorkset{}).
+			Select("index").
+			Where("id = ?", newComic.WorksetID).
+			First(&workset).
+			Error; err != nil {
+			return fmt.Errorf("Failed to get workset index: %w", err)
+		}
+		newComic.WorksetIndex = int(workset.Index)
+
 		// Count total comic count in the workset.
 		// A optimistic lock based on unqiue index is expected.
 		var cnt int64
@@ -87,9 +98,7 @@ func (cr *comicRepo) GetComicByID(ex Executor, comicID string) (*po.BasicComic, 
 	if err := ex.
 		Model(&po.BasicComic{}).
 		Select(`comic_tbl.*, 
-			workset_tbl.index AS workset_index, 
 			user_tbl.nickname AS creator_nickname`).
-		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id").
 		Joins("LEFT JOIN user_tbl ON comic_tbl.creator_id = user_tbl.id").
 		Where("comic_tbl.id = ?", comicID).
 		First(c).
@@ -106,9 +115,6 @@ func (cr *comicRepo) GetComicsByWorksetID(ex Executor, worksetID string, offset,
 	var lst []po.BriefComic
 
 	q := ex.Model(&po.BriefComic{}).
-		Select(`comic_tbl.*, 
-			workset_tbl.index AS workset_index`).
-		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id").
 		Where("comic_tbl.workset_id = ?", worksetID)
 
 	if offset > 0 {
@@ -255,10 +261,7 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 
 	var lst []po.BriefComic
 
-	query := ex.Model(&po.BriefComic{}).
-		Select(`comic_tbl.*, 
-			workset_tbl.index AS workset_index`).
-		Joins("LEFT JOIN workset_tbl ON comic_tbl.workset_id = workset_tbl.id")
+	query := ex.Model(&po.BriefComic{})
 
 	if opt.Author != nil {
 		query = query.Where("comic_tbl.author LIKE ?", "%"+*opt.Author+"%")
@@ -268,8 +271,8 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 		query = query.Where("comic_tbl.title LIKE ?", "%"+*opt.Title+"%")
 	}
 
-	if opt.WorksetID != nil {
-		query = query.Where("comic_tbl.workset_id = ?", *opt.WorksetID)
+	if opt.WorksetIndex != nil {
+		query = query.Where("comic_tbl.workset_index = ?", *opt.WorksetIndex)
 	}
 
 	if opt.Index != nil {

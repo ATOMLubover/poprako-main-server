@@ -34,17 +34,20 @@ type ComicPageSvc interface {
 type comicPageSvc struct {
 	pageRepo  repo.ComicPageRepo
 	comicRepo repo.ComicRepo
+	unitRepo  repo.ComicUnitRepo
 	ossClient oss.OSSClient
 }
 
 func NewComicPageSvc(
 	pageRepo repo.ComicPageRepo,
 	comicRepo repo.ComicRepo,
+	unitRepo repo.ComicUnitRepo,
 	ossClient oss.OSSClient,
 ) ComicPageSvc {
 	return &comicPageSvc{
 		pageRepo:  pageRepo,
 		comicRepo: comicRepo,
+		unitRepo:  unitRepo,
 		ossClient: ossClient,
 	}
 }
@@ -56,6 +59,13 @@ func (cps *comicPageSvc) GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo
 		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
 	}
 
+	// Get unit counts for the page
+	counts, err := cps.unitRepo.GetUnitCountsByPageID(nil, pageID)
+	if err != nil {
+		zap.L().Error("Failed to get unit counts for page", zap.String("pageID", pageID), zap.Error(err))
+		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+	}
+
 	// Get presigned URL for download
 	ossURL, err := cps.ossClient.PresignGet(page.OSSKey)
 	if err != nil {
@@ -64,11 +74,15 @@ func (cps *comicPageSvc) GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo
 	}
 
 	pageInfo := model.ComicPageInfo{
-		ID:       page.ID,
-		ComicID:  page.ComicID,
-		Index:    page.Index,
-		OSSURL:   ossURL,
-		Uploaded: page.Uploaded,
+		ID:                  page.ID,
+		ComicID:             page.ComicID,
+		Index:               page.Index,
+		OSSURL:              ossURL,
+		Uploaded:            page.Uploaded,
+		InboxUnitCount:      counts.Inbox,
+		OutboxUnitCount:     counts.Outbox,
+		TranslatedUnitCount: counts.Translated,
+		ProvedUnitCount:     counts.Proved,
 	}
 
 	return accept(200, pageInfo), NO_ERROR
@@ -81,6 +95,19 @@ func (cps *comicPageSvc) GetPagesByComicID(comicID string) (SvcRslt[[]model.Comi
 		return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
 	}
 
+	// Collect page IDs for batch unit counts query
+	pageIDs := make([]string, len(pages))
+	for i, page := range pages {
+		pageIDs[i] = page.ID
+	}
+
+	// Get unit counts for all pages in one query
+	countsMap, err := cps.unitRepo.GetUnitCountsByPageIDs(nil, pageIDs)
+	if err != nil {
+		zap.L().Error("Failed to get unit counts for pages", zap.String("comicID", comicID), zap.Error(err))
+		return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
+	}
+
 	pageInfos := make([]model.ComicPageInfo, len(pages))
 	for i, page := range pages {
 		// Get presigned URL for each page
@@ -90,12 +117,19 @@ func (cps *comicPageSvc) GetPagesByComicID(comicID string) (SvcRslt[[]model.Comi
 			return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
 		}
 
+		// Get counts from map, default to zero if not found
+		counts := countsMap[page.ID]
+
 		pageInfos[i] = model.ComicPageInfo{
-			ID:       page.ID,
-			ComicID:  page.ComicID,
-			Index:    page.Index,
-			OSSURL:   ossURL,
-			Uploaded: page.Uploaded,
+			ID:                  page.ID,
+			ComicID:             page.ComicID,
+			Index:               page.Index,
+			OSSURL:              ossURL,
+			Uploaded:            page.Uploaded,
+			InboxUnitCount:      counts.Inbox,
+			OutboxUnitCount:     counts.Outbox,
+			TranslatedUnitCount: counts.Translated,
+			ProvedUnitCount:     counts.Proved,
 		}
 	}
 

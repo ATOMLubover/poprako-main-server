@@ -32,3 +32,11 @@ type Repo interface {
 	Exec() Executor
 	withTrx(tx Executor) Executor
 }
+
+// UnitCounts holds aggregate counts for different unit states on a page.
+type UnitCounts struct {
+	Inbox      int64
+	Outbox     int64
+	Translated int64
+	Proved     int64
+}

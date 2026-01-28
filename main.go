@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"poprako-main-server/internal/api/http"
 	"poprako-main-server/internal/config"
@@ -10,6 +11,7 @@ import (
 	"poprako-main-server/internal/logger"
 	"poprako-main-server/internal/oss"
 	"poprako-main-server/internal/repo"
+	"poprako-main-server/internal/seeder"
 	"poprako-main-server/internal/state"
 	"poprako-main-server/internal/svc"
 
@@ -26,7 +28,15 @@ func main() {
 
 	cfg := config.LoadConfig("")
 
-	state := initAppState(cfg)
+	// Initialize database early to allow seeding
+	ex := repo.InitDB()
+
+	// Run seeder in development environment
+	if os.Getenv("GO_ENV") == "development" {
+		seeder.Seed(ex)
+	}
+
+	state := initAppState(cfg, ex)
 
 	http.Run(state)
 }
@@ -44,13 +54,11 @@ func initLogger() {
 	zap.ReplaceGlobals(lgr)
 }
 
-func initAppState(cfg config.AppCfg) state.AppState {
+func initAppState(cfg config.AppCfg, ex repo.Executor) state.AppState {
 	// Create JWT codec.
 	jwtCodec := jwtcodec.NewJWTCodec(cfg.JWTExpSecs)
 
-	// Create repositories.
-	ex := repo.InitDB()
-
+	// Create repositories using the provided executor
 	userRepo := repo.NewUserRepo(ex)
 	comicRepo := repo.NewComicRepo(ex)
 	worksetRepo := repo.NewWorksetRepo(ex)
@@ -68,7 +76,7 @@ func initAppState(cfg config.AppCfg) state.AppState {
 	worksetSvc := svc.NewWorksetSvc(worksetRepo, userRepo)
 	comicUnitSvc := svc.NewComicUnitSvc(comicUnitRepo)
 	comicAsgnSvc := svc.NewComicAsgnSvc(comicAsgnRepo)
-	comicPageSvc := svc.NewComicPageSvc(comicPageRepo, comicRepo, ossClient)
+	comicPageSvc := svc.NewComicPageSvc(comicPageRepo, comicRepo, comicUnitRepo, ossClient)
 	invitationSvc := svc.NewInvitationSvc(invRepo, userRepo)
 
 	return state.NewAppState(

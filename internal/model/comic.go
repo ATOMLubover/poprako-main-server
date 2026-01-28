@@ -4,7 +4,7 @@ type ComicBrief struct {
 	ID string `json:"id"`
 
 	WorksetID    string `json:"workset_id"`
-	WorksetIndex string `json:"workset_index"`
+	WorksetIndex int    `json:"workset_index"`
 	Index        int64  `json:"index"`
 
 	Author string `json:"author"`
@@ -26,7 +26,7 @@ type ComicInfo struct {
 	ID string `json:"id"`
 
 	WorksetID    string `json:"workset_id"`
-	WorksetIndex string `json:"workset_index"`
+	WorksetIndex int    `json:"workset_index"`
 	Index        int64  `json:"index"`
 
 	CreatorID       string `json:"creator_id"`
@@ -57,7 +57,7 @@ type RetrieveComicOpt struct {
 	Author *string `url:"aut,omitempty"`
 	Title  *string `url:"tit,omitempty"`
 
-	WorksetID *string `url:"wid,omitempty"`
+	WorksetIndex *string `url:"widx,omitempty"`
 	Index     *string `url:"idx,omitempty"`
 
 	// Every group below is only allowed to be one of three states:

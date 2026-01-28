@@ -12,6 +12,10 @@ type ComicUnitRepo interface {
 
 	GetUnitsByPageID(ex Executor, pageID string) ([]po.BasicComicUnit, error)
 
+	GetUnitCountsByPageID(ex Executor, pageID string) (UnitCounts, error)
+
+	GetUnitCountsByPageIDs(ex Executor, pageIDs []string) (map[string]UnitCounts, error)
+
 	CreateUnits(ex Executor, newUnits []po.NewComicUnit) error
 
 	UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchComicUnit) error
@@ -137,4 +141,80 @@ func (cur *comicUnitRepo) DeleteUnitByIDs(ex Executor, unitIDs []string) error {
 	ex = cur.withTrx(ex)
 
 	return ex.Where("id IN ?", unitIDs).Delete(&po.BasicComicUnit{}).Error
+}
+
+func (cur *comicUnitRepo) GetUnitCountsByPageID(ex Executor, pageID string) (UnitCounts, error) {
+	ex = cur.withTrx(ex)
+
+	var result struct {
+		Inbox      int64
+		Outbox     int64
+		Translated int64
+		Proved     int64
+	}
+
+	err := ex.Table("comic_unit_tbl").
+		Select(`
+			SUM(CASE WHEN is_in_box = true THEN 1 ELSE 0 END) AS inbox,
+			SUM(CASE WHEN is_in_box = false THEN 1 ELSE 0 END) AS outbox,
+			SUM(CASE WHEN translated_text IS NOT NULL AND translated_text != '' THEN 1 ELSE 0 END) AS translated,
+			SUM(CASE WHEN proved = true THEN 1 ELSE 0 END) AS proved
+		`).
+		Where("page_id = ?", pageID).
+		Scan(&result).
+		Error
+	if err != nil {
+		return UnitCounts{}, fmt.Errorf("Failed to get unit counts by page ID: %w", err)
+	}
+
+	return UnitCounts{
+		Inbox:      result.Inbox,
+		Outbox:     result.Outbox,
+		Translated: result.Translated,
+		Proved:     result.Proved,
+	}, nil
+}
+
+func (cur *comicUnitRepo) GetUnitCountsByPageIDs(ex Executor, pageIDs []string) (map[string]UnitCounts, error) {
+	if len(pageIDs) == 0 {
+		return make(map[string]UnitCounts), nil
+	}
+
+	ex = cur.withTrx(ex)
+
+	var results []struct {
+		PageID     string
+		Inbox      int64
+		Outbox     int64
+		Translated int64
+		Proved     int64
+	}
+
+	err := ex.Table("comic_unit_tbl").
+		Select(`
+			page_id,
+			SUM(CASE WHEN is_in_box = true THEN 1 ELSE 0 END) AS inbox,
+			SUM(CASE WHEN is_in_box = false THEN 1 ELSE 0 END) AS outbox,
+			SUM(CASE WHEN translated_text IS NOT NULL AND translated_text != '' THEN 1 ELSE 0 END) AS translated,
+			SUM(CASE WHEN proved = true THEN 1 ELSE 0 END) AS proved
+		`).
+		Where("page_id IN ?", pageIDs).
+		Group("page_id").
+		Scan(&results).
+		Error
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get unit counts by page IDs: %w", err)
+	}
+
+	countsMap := make(map[string]UnitCounts, len(results))
+	for _, r := range results {
+		countsMap[r.PageID] = UnitCounts{
+			Inbox:      r.Inbox,
+			Outbox:     r.Outbox,
+			Translated: r.Translated,
+			Proved:     r.Proved,
+		}
+	}
+
+	return countsMap, nil
 }

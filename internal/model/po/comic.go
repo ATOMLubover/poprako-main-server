@@ -12,13 +12,14 @@ const (
 type NewComic struct {
 	ID string `gorm:"column:id;primaryKey"`
 
-	WorksetID   string  `gorm:"column:workset_id"`
-	Index       int64   `gorm:"column:index"`
-	CreatorID   string  `gorm:"column:creator_id"`
-	Author      string  `gorm:"column:author"`
-	Title       string  `gorm:"column:title"`
-	Comment     *string `gorm:"column:comment"`
-	Description *string `gorm:"column:description"`
+	WorksetID    string  `gorm:"column:workset_id"`
+	WorksetIndex int     `gorm:"column:workset_index"`
+	Index        int64   `gorm:"column:index"`
+	CreatorID    string  `gorm:"column:creator_id"`
+	Author       string  `gorm:"column:author"`
+	Title        string  `gorm:"column:title"`
+	Comment      *string `gorm:"column:comment"`
+	Description  *string `gorm:"column:description"`
 }
 
 // Used when retrieving brief comic info.
@@ -26,7 +27,7 @@ type BriefComic struct {
 	ID string `gorm:"column:id;primaryKey"`
 
 	WorksetID    string `gorm:"column:workset_id"`
-	WorksetIndex string `gorm:"column:workset_index"`
+	WorksetIndex int    `gorm:"column:workset_index"`
 	Index        int64  `gorm:"column:index"`
 
 	Author string `gorm:"column:author"`
@@ -49,7 +50,7 @@ type BasicComic struct {
 	ID string `gorm:"column:id;primaryKey"`
 
 	WorksetID    string `gorm:"column:workset_id"`
-	WorksetIndex string `gorm:"column:workset_index"`
+	WorksetIndex int    `gorm:"column:workset_index"`
 	Index        int64  `gorm:"column:index"`
 
 	CreatorID       string `gorm:"column:creator_id"`
