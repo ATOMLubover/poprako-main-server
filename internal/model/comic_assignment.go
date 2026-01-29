@@ -4,6 +4,7 @@ type ComicAsgnInfo struct {
 	ID                    string `json:"id"`
 	ComicID               string `json:"comic_id"`
 	UserID                string `json:"user_id"`
+	UserNickname          string `json:"user_nickname"`
 	AssignedTranslatorAt  *int64 `json:"assigned_translator_at,omitempty"`
 	AssignedProofreaderAt *int64 `json:"assigned_proofreader_at,omitempty"`
 	AssignedTypesetterAt  *int64 `json:"assigned_typesetter_at,omitempty"`

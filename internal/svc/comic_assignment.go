@@ -131,11 +131,12 @@ func (cas *comicAsgnSvc) DeleteAsgnByID(assignmentID string) SvcErr {
 // poAsgnToModelAsgn converts po.BasicComicAsgn to model.ComicAsgnInfo
 func poAsgnToModelAsgn(asgn *po.BasicComicAsgn) model.ComicAsgnInfo {
 	info := model.ComicAsgnInfo{
-		ID:        asgn.ID,
-		ComicID:   asgn.ComicID,
-		UserID:    asgn.UserID,
-		CreatedAt: asgn.CreatedAt.Unix(),
-		UpdatedAt: asgn.UpdatedAt.Unix(),
+		ID:           asgn.ID,
+		ComicID:      asgn.ComicID,
+		UserID:       asgn.UserID,
+		UserNickname: asgn.UserNickname,
+		CreatedAt:    asgn.CreatedAt.Unix(),
+		UpdatedAt:    asgn.UpdatedAt.Unix(),
 	}
 
 	if asgn.AssignedTranslatorAt != nil {

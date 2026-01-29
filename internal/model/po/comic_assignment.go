@@ -17,9 +17,10 @@ type NewComicAsgn struct {
 
 // Used when retrieving basic comic assignment info.
 type BasicComicAsgn struct {
-	ID      string `gorm:"column:id;primaryKey"`
-	ComicID string `gorm:"column:comic_id"`
-	UserID  string `gorm:"column:user_id"`
+	ID           string `gorm:"column:id;primaryKey"`
+	ComicID      string `gorm:"column:comic_id"`
+	UserID       string `gorm:"column:user_id"`
+	UserNickname string `gorm:"column:user_nickname"`
 
 	AssignedTranslatorAt  *time.Time `gorm:"column:assigned_translator_at"`
 	AssignedProofreaderAt *time.Time `gorm:"column:assigned_proofreader_at"`

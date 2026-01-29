@@ -52,7 +52,10 @@ func (car *comicAsgnRepo) GetAsgnByID(ex Executor, assignmentID string) (*po.Bas
 	a := &po.BasicComicAsgn{}
 
 	if err := ex.
-		Where("id = ?", assignmentID).
+		Table(po.COMIC_ASSIGNMENT_TABLE).
+		Select(po.COMIC_ASSIGNMENT_TABLE+".*, "+po.USER_TABLE+".nickname AS user_nickname").
+		Joins("LEFT JOIN "+po.USER_TABLE+" ON "+po.COMIC_ASSIGNMENT_TABLE+".user_id = "+po.USER_TABLE+".id").
+		Where(po.COMIC_ASSIGNMENT_TABLE+".id = ?", assignmentID).
 		First(a).
 		Error; err != nil {
 		return nil, fmt.Errorf("Failed to get assignment by ID: %w", err)
@@ -66,7 +69,11 @@ func (car *comicAsgnRepo) GetAsgnsByComicID(ex Executor, comicID string, offset,
 
 	var lst []po.BasicComicAsgn
 
-	query := ex.Where("comic_id = ?", comicID)
+	query := ex.
+		Table(po.COMIC_ASSIGNMENT_TABLE).
+		Select(po.COMIC_ASSIGNMENT_TABLE+".*, "+po.USER_TABLE+".nickname AS user_nickname").
+		Joins("LEFT JOIN "+po.USER_TABLE+" ON "+po.COMIC_ASSIGNMENT_TABLE+".user_id = "+po.USER_TABLE+".id").
+		Where(po.COMIC_ASSIGNMENT_TABLE+".comic_id = ?", comicID)
 
 	if offset > 0 {
 		query = query.Offset(offset)
@@ -90,7 +97,11 @@ func (car *comicAsgnRepo) GetAsgnsByUserID(ex Executor, userID string, offset, l
 
 	var lst []po.BasicComicAsgn
 
-	q := ex.Where("user_id = ?", userID)
+	q := ex.
+		Table(po.COMIC_ASSIGNMENT_TABLE).
+		Select(po.COMIC_ASSIGNMENT_TABLE+".*, "+po.USER_TABLE+".nickname AS user_nickname").
+		Joins("LEFT JOIN "+po.USER_TABLE+" ON "+po.COMIC_ASSIGNMENT_TABLE+".user_id = "+po.USER_TABLE+".id").
+		Where(po.COMIC_ASSIGNMENT_TABLE+".user_id = ?", userID)
 
 	if offset > 0 {
 		q = q.Offset(offset)
