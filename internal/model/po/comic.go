@@ -81,15 +81,10 @@ type BasicComic struct {
 type PatchComic struct {
 	ID string `gorm:"column:id;primaryKey"`
 
-	WorksetID   *string `gorm:"column:workset_id"`
-	Index       *int64  `gorm:"column:index"`
-	CreatorID   *string `gorm:"column:creator_id"`
 	Author      *string `gorm:"column:author"`
 	Title       *string `gorm:"column:title"`
 	Comment     *string `gorm:"column:comment"`
 	Description *string `gorm:"column:description"`
-
-	PageCount *int64 `gorm:"column:page_count"`
 
 	TranslatingStartedAt    *time.Time `gorm:"column:translating_started_at"`
 	TranslatingCompletedAt  *time.Time `gorm:"column:translating_completed_at"`

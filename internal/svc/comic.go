@@ -217,12 +217,40 @@ func (cs *comicSvc) CreateComic(opID string, args model.CreateComicArgs) (SvcRsl
 
 // UpdateComicByID updates comic info by ID.
 func (cs *comicSvc) UpdateComicByID(args model.UpdateComicArgs) SvcErr {
+	now := time.Now()
+
 	patch := &po.PatchComic{
 		ID:          args.ID,
 		Author:      args.Author,
 		Title:       args.Title,
 		Description: args.Description,
 		Comment:     args.Comment,
+	}
+
+	// Handle workflow timestamp toggles - only set when true
+	if args.TranslatingStarted != nil && *args.TranslatingStarted {
+		patch.TranslatingStartedAt = &now
+	}
+	if args.TranslatingCompleted != nil && *args.TranslatingCompleted {
+		patch.TranslatingCompletedAt = &now
+	}
+	if args.ProofreadingStarted != nil && *args.ProofreadingStarted {
+		patch.ProofreadingStartedAt = &now
+	}
+	if args.ProofreadingCompleted != nil && *args.ProofreadingCompleted {
+		patch.ProofreadingCompletedAt = &now
+	}
+	if args.TypesettingStarted != nil && *args.TypesettingStarted {
+		patch.TypesettingStartedAt = &now
+	}
+	if args.TypesettingCompleted != nil && *args.TypesettingCompleted {
+		patch.TypesettingCompletedAt = &now
+	}
+	if args.ReviewingCompleted != nil && *args.ReviewingCompleted {
+		patch.ReviewingCompletedAt = &now
+	}
+	if args.UploadingCompleted != nil && *args.UploadingCompleted {
+		patch.UploadingCompletedAt = &now
 	}
 
 	if err := cs.repo.UpdateComicByID(nil, patch); err != nil {

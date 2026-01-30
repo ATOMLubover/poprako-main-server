@@ -2,6 +2,7 @@ CREATE TABLE "comic_tbl" (
     "id" TEXT PRIMARY KEY NOT NULL,
     
     "workset_id" TEXT NOT NULL REFERENCES "workset_tbl"("id"),
+    "workset_index" INTEGER NOT NULL,
     "index" INTEGER NOT NULL,
     
     "creator_id" TEXT NOT NULL REFERENCES "user_tbl"("id"),

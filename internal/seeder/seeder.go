@@ -13,18 +13,18 @@ import (
 )
 
 type ComicProgress struct {
-	ComicID           string
-	Pages             []po.NewComicPage
-	HasTranslator     bool
-	HasProofreader    bool
-	HasTypesetter     bool
-	HasReviewer       bool
-	TranslatorID      string
-	ProofreaderID     string
-	TranslationRate   float64
-	ProofreadRate     float64
-	TypesettingDone   bool
-	ReviewingDone     bool
+	ComicID         string
+	Pages           []po.NewComicPage
+	HasTranslator   bool
+	HasProofreader  bool
+	HasTypesetter   bool
+	HasReviewer     bool
+	TranslatorID    string
+	ProofreaderID   string
+	TranslationRate float64
+	ProofreadRate   float64
+	TypesettingDone bool
+	ReviewingDone   bool
 }
 
 func Seed(ex repo.Executor) {
@@ -92,7 +92,7 @@ func Seed(ex repo.Executor) {
 	for i := 0; i < totalComics; i++ {
 		comicID := uuid.NewString()
 		wsID := worksets[i%len(worksets)]
-		
+
 		comic := &po.NewComic{
 			ID:          comicID,
 			WorksetID:   wsID,
@@ -136,12 +136,12 @@ func Seed(ex repo.Executor) {
 		hasReviewer := hasTypesetter && rand.Float64() < 0.3
 
 		progress := ComicProgress{
-			ComicID:       comicID,
-			Pages:         newPages,
-			HasTranslator: hasTranslator,
+			ComicID:        comicID,
+			Pages:          newPages,
+			HasTranslator:  hasTranslator,
 			HasProofreader: hasProofreader,
-			HasTypesetter: hasTypesetter,
-			HasReviewer:   hasReviewer,
+			HasTypesetter:  hasTypesetter,
+			HasReviewer:    hasReviewer,
 		}
 
 		if hasTranslator {
@@ -281,9 +281,9 @@ func Seed(ex repo.Executor) {
 	zap.L().Info("Database seeding completed", zap.Int("comics", totalComics))
 }
 
-func createUsers(ex repo.Executor, userRepo repo.UserRepo, count int, rolePrefix string, 
-	translator, proofreader, typesetter, redrawer, reviewer, uploader bool) []string {
-	
+func createUsers(ex repo.Executor, userRepo repo.UserRepo, count int, rolePrefix string,
+	translator, proofreader, typesetter, redrawer, reviewer, uploader bool,
+) []string {
 	now := time.Now()
 	users := make([]string, 0, count)
 
@@ -326,18 +326,18 @@ func createUsers(ex repo.Executor, userRepo repo.UserRepo, count int, rolePrefix
 	return users
 }
 
-func updateComicProgress(ex repo.Executor, comicRepo repo.ComicRepo, prog ComicProgress, 
-	totalUnits, translatedUnits int) {
-	
+func updateComicProgress(ex repo.Executor, comicRepo repo.ComicRepo, prog ComicProgress,
+	totalUnits, translatedUnits int,
+) {
 	if !prog.HasTranslator {
 		return
 	}
 
 	now := time.Now()
 	baseTime := now.Add(-time.Hour * 24 * 30)
-	
+
 	patch := &po.PatchComic{ID: prog.ComicID}
-	
+
 	translatingStart := baseTime
 	patch.TranslatingStartedAt = &translatingStart
 

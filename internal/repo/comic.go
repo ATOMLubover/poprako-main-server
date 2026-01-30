@@ -158,15 +158,6 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 
 	updates := map[string]any{}
 
-	if patchComic.WorksetID != nil {
-		updates["workset_id"] = *patchComic.WorksetID
-	}
-	if patchComic.Index != nil {
-		updates["index"] = *patchComic.Index
-	}
-	if patchComic.CreatorID != nil {
-		updates["creator_id"] = *patchComic.CreatorID
-	}
 	if patchComic.Author != nil {
 		updates["author"] = *patchComic.Author
 	}
@@ -178,9 +169,6 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 	}
 	if patchComic.Description != nil {
 		updates["description"] = *patchComic.Description
-	}
-	if patchComic.PageCount != nil {
-		updates["page_count"] = *patchComic.PageCount
 	}
 
 	if patchComic.TranslatingStartedAt != nil {
@@ -340,6 +328,7 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 	}
 
 	if err := query.
+		Order("comic_tbl.updated_at DESC").
 		Find(&lst).
 		Error; err != nil {
 		return nil, fmt.Errorf("Failed to retrieve comics: %w", err)

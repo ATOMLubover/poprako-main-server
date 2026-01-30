@@ -58,7 +58,7 @@ type RetrieveComicOpt struct {
 	Title  *string `url:"tit,omitempty"`
 
 	WorksetIndex *string `url:"widx,omitempty"`
-	Index     *string `url:"idx,omitempty"`
+	Index        *string `url:"idx,omitempty"`
 
 	// Every group below is only allowed to be one of three states:
 	// nil (not care), true, false.
@@ -110,4 +110,14 @@ type UpdateComicArgs struct {
 	Title       *string `json:"title,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Comment     *string `json:"comment,omitempty"`
+
+	// Workflow status toggles - true sets timestamp to now, false/nil ignores
+	TranslatingStarted    *bool `json:"translating_started,omitempty"`
+	TranslatingCompleted  *bool `json:"translating_completed,omitempty"`
+	ProofreadingStarted   *bool `json:"proofreading_started,omitempty"`
+	ProofreadingCompleted *bool `json:"proofreading_completed,omitempty"`
+	TypesettingStarted    *bool `json:"typesetting_started,omitempty"`
+	TypesettingCompleted  *bool `json:"typesetting_completed,omitempty"`
+	ReviewingCompleted    *bool `json:"reviewing_completed,omitempty"`
+	UploadingCompleted    *bool `json:"uploading_completed,omitempty"`
 }

@@ -23,6 +23,12 @@ func InitDB() Executor {
 		panic(DB_CONNECTION_FAILURE.Error())
 	}
 
+	sqlDB, err := exec.DB()
+	if err == nil {
+		sqlDB.SetMaxOpenConns(20) // max open
+		sqlDB.SetMaxIdleConns(5)  // max idle
+	}
+
 	zap.L().Info("Connected to database successfully")
 
 	return exec
