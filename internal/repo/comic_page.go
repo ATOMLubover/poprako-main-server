@@ -112,9 +112,6 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 	if patchPage.Index != nil {
 		updates["index"] = *patchPage.Index
 	}
-	if patchPage.OSSKey != nil {
-		updates["oss_key"] = *patchPage.OSSKey
-	}
 	if patchPage.Uploaded != nil {
 		updates["uploaded"] = *patchPage.Uploaded
 	}

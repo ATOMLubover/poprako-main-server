@@ -4,10 +4,7 @@ CREATE TABLE "comic_page_tbl" (
     "comic_id" TEXT NOT NULL REFERENCES "comic_tbl"("id"),
     "index" INTEGER NOT NULL,
     
-    "oss_key" TEXT NOT NULL,
-    -- "size_bytes" INTEGER NOT NULL,
-    
-    "uploaded" BOOLEAN DEFAULT TRUE NOT NULL,
+    "uploaded" BOOLEAN DEFAULT false NOT NULL,
     
     "created_at" TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     "updated_at" TIMESTAMPTZ DEFAULT NOW() NOT NULL,

@@ -119,7 +119,6 @@ func Seed(ex repo.Executor) {
 				ID:       pageID,
 				ComicID:  comicID,
 				Index:    int64(p + 1),
-				OSSKey:   fmt.Sprintf("mock/%s/page_%d.jpg", comicID, p+1),
 				Uploaded: &uploaded,
 			})
 		}

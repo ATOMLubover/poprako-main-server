@@ -66,11 +66,19 @@ func (cps *comicPageSvc) GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo
 		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
 	}
 
-	// Get presigned URL for download
-	ossURL, err := cps.ossClient.PresignGet(page.OSSKey)
-	if err != nil {
-		zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", pageID), zap.String("ossKey", page.OSSKey), zap.Error(err))
-		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+	// Only generate OSS URL if page is uploaded
+	var ossURL string
+	if page.Uploaded {
+		// Dynamically generate OSS key: comic/{comic_id}/page_{index}
+		ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
+
+		// Get presigned URL for download
+		var err error
+		ossURL, err = cps.ossClient.PresignGet(ossKey)
+		if err != nil {
+			zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", pageID), zap.String("ossKey", ossKey), zap.Error(err))
+			return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+		}
 	}
 
 	pageInfo := model.ComicPageInfo{
@@ -110,11 +118,19 @@ func (cps *comicPageSvc) GetPagesByComicID(comicID string) (SvcRslt[[]model.Comi
 
 	pageInfos := make([]model.ComicPageInfo, len(pages))
 	for i, page := range pages {
-		// Get presigned URL for each page
-		ossURL, err := cps.ossClient.PresignGet(page.OSSKey)
-		if err != nil {
-			zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", page.ID), zap.String("ossKey", page.OSSKey), zap.Error(err))
-			return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
+		// Only generate OSS URL if page is uploaded
+		var ossURL string
+		if page.Uploaded {
+			// Dynamically generate OSS key for each page
+			ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
+
+			// Get presigned URL for each page
+			var err error
+			ossURL, err = cps.ossClient.PresignGet(ossKey)
+			if err != nil {
+				zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", page.ID), zap.String("ossKey", ossKey), zap.Error(err))
+				return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
+			}
 		}
 
 		// Get counts from map, default to zero if not found
@@ -175,14 +191,13 @@ func (cps *comicPageSvc) CreatePages(
 			return SvcRslt[[]model.CreateComicPageReply]{}, ID_GEN_FAILURE
 		}
 
-		// Format: comic/{comic_id}/page_{index}.{ext}
+		// Dynamically generate OSS key: comic/{comic_id}/page_{index}.{ext}
 		ossKey := fmt.Sprintf("comic/%s/page_%d.%s", arg.ComicID, arg.Index, arg.ImageExt)
 
 		newPages[i] = po.NewComicPage{
 			ID:       pageID,
 			ComicID:  arg.ComicID,
 			Index:    arg.Index,
-			OSSKey:   ossKey,
 			Uploaded: &uploadedFalse,
 		}
 
