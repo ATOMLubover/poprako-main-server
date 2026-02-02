@@ -72,6 +72,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	{
 		pages.Get("/{page_id:string}", GetPageByID(appState))
 		pages.Post("", CreatePages(appState))
+		pages.Post("/recreate", RecreatePage(appState))
 		pages.Delete("/{page_id:string}", DeletePageByID(appState))
 		pages.Patch("/{page_id:string}", UpdatePageByID(appState))
 	}

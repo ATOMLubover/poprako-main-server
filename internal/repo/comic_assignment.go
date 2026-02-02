@@ -14,6 +14,7 @@ type ComicAsgnRepo interface {
 	GetAsgnByID(ex Executor, assignmentID string) (*po.BasicComicAsgn, error)
 	GetAsgnsByComicID(ex Executor, comicID string, offset, limit int) ([]po.BasicComicAsgn, error)
 	GetAsgnsByUserID(ex Executor, userID string, offset, limit int) ([]po.BasicComicAsgn, error)
+	GetAsgnsByUserAndComicID(ex Executor, userID, comicID string) (*po.BasicComicAsgn, error)
 
 	CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error
 
@@ -118,6 +119,24 @@ func (car *comicAsgnRepo) GetAsgnsByUserID(ex Executor, userID string, offset, l
 	}
 
 	return lst, nil
+}
+
+func (car *comicAsgnRepo) GetAsgnsByUserAndComicID(ex Executor, userID, comicID string) (*po.BasicComicAsgn, error) {
+	ex = car.withTrx(ex)
+
+	a := &po.BasicComicAsgn{}
+
+	if err := ex.
+		Table(po.COMIC_ASSIGNMENT_TABLE).
+		Select(po.COMIC_ASSIGNMENT_TABLE+".*, "+po.USER_TABLE+".nickname AS user_nickname").
+		Joins("LEFT JOIN "+po.USER_TABLE+" ON "+po.COMIC_ASSIGNMENT_TABLE+".user_id = "+po.USER_TABLE+".id").
+		Where(po.COMIC_ASSIGNMENT_TABLE+".user_id = ? AND "+po.COMIC_ASSIGNMENT_TABLE+".comic_id = ?", userID, comicID).
+		First(a).
+		Error; err != nil {
+		return nil, fmt.Errorf("Failed to get assignment by user ID and comic ID: %w", err)
+	}
+
+	return a, nil
 }
 
 func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error {

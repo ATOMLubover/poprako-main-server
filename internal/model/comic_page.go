@@ -25,8 +25,14 @@ type CreateComicPageReply struct {
 	OSSURL string `json:"oss_url"`
 }
 
+type RecreateComicPageArgs struct {
+	ID       string `json:"id"`
+	ImageExt string `json:"image_ext"`
+}
+
 type PatchComicPageArgs struct {
 	ID string `json:"id"`
 	// After upload, client should report the page as uploaded
+	ImageExt  *string `json:"image_ext,omitempty"`
 	Uploaded *bool `json:"uploaded,omitempty"`
 }

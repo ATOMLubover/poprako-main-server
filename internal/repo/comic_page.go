@@ -6,6 +6,7 @@ import (
 	"poprako-main-server/internal/model/po"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ComicPageRepo interface {
@@ -112,6 +113,9 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 	if patchPage.Index != nil {
 		updates["index"] = *patchPage.Index
 	}
+	if patchPage.OSSKey != nil {
+		updates["oss_key"] = *patchPage.OSSKey
+	}
 	if patchPage.Uploaded != nil {
 		updates["uploaded"] = *patchPage.Uploaded
 	}
@@ -127,13 +131,24 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 }
 
 func (cpr *comicPageRepo) DeletePageByID(ex Executor, pageID string) error {
-	return cpr.Exec().Transaction(func(tx Executor) error {
+	ex = cpr.withTrx(ex)
+
+	return ex.Transaction(func(tx Executor) error {
 		// Get page first to get comic_id
 		page := &po.BasicComicPage{}
 		if err := tx.Where("id = ?", pageID).First(page).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return REC_NOT_FOUND
 			}
+			return err
+		}
+
+		comicID := page.ComicID
+
+		// Lock the comic to serialize access to pages
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", comicID).
+			First(&po.BasicComic{}).Error; err != nil {
 			return err
 		}
 
@@ -144,10 +159,30 @@ func (cpr *comicPageRepo) DeletePageByID(ex Executor, pageID string) error {
 
 		// Update comic page_count
 		if err := tx.Model(&po.BasicComic{}).
-			Where("id = ?", page.ComicID).
+			Where("id = ?", comicID).
 			UpdateColumn("page_count", gorm.Expr("page_count - ?", 1)).
 			Error; err != nil {
 			return err
+		}
+
+		// Get all pages for the comic to reorder
+		var pages []po.BasicComicPage
+		if err := tx.Select("id", "index").
+			Where("comic_id = ?", comicID).
+			Order("index asc").
+			Find(&pages).Error; err != nil {
+			return err
+		}
+
+		// Rewrite indices to ensure continuity
+		for i, p := range pages {
+			if p.Index != int64(i) {
+				if err := tx.Model(&po.BasicComicPage{}).
+					Where("id = ?", p.ID).
+					UpdateColumn("index", int64(i)).Error; err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil

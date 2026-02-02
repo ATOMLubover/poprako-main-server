@@ -76,7 +76,7 @@ func initAppState(cfg config.AppCfg, ex repo.Executor) state.AppState {
 	worksetSvc := svc.NewWorksetSvc(worksetRepo, userRepo)
 	comicUnitSvc := svc.NewComicUnitSvc(comicUnitRepo)
 	comicAsgnSvc := svc.NewComicAsgnSvc(comicAsgnRepo)
-	comicPageSvc := svc.NewComicPageSvc(comicPageRepo, comicRepo, comicUnitRepo, ossClient)
+	comicPageSvc := svc.NewComicPageSvc(comicPageRepo, comicRepo, comicAsgnRepo, comicUnitRepo, ossClient)
 	invitationSvc := svc.NewInvitationSvc(invRepo, userRepo)
 
 	return state.NewAppState(

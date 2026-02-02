@@ -21,6 +21,7 @@ type BasicComicPage struct {
 	ID        string    `gorm:"column:id;primaryKey"`
 	ComicID   string    `gorm:"column:comic_id"`
 	Index     int64     `gorm:"column:index"`
+	OSSKey    string    `gorm:"column:oss_key"`
 	Uploaded  bool      `gorm:"column:uploaded"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
@@ -31,6 +32,7 @@ type PatchComicPage struct {
 	ID       string  `gorm:"column:id;primaryKey"`
 	ComicID  *string `gorm:"column:comic_id"`
 	Index    *int64  `gorm:"column:index"`
+	OSSKey   *string `gorm:"column:oss_key"`
 	Uploaded *bool   `gorm:"column:uploaded"`
 }
 

@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"context"
 	"fmt"
 
 	"poprako-main-server/internal/model"
@@ -25,6 +26,13 @@ type ComicPageSvc interface {
 		SvcRslt[[]model.CreateComicPageReply],
 		SvcErr,
 	)
+	RecreatePage(
+		opID string, 
+				args *model.RecreateComicPageArgs,
+		) (
+		SvcRslt[model.CreateComicPageReply],
+		SvcErr,
+	)
 
 	UpdatePageByID(opID string, args *model.PatchComicPageArgs) SvcErr
 
@@ -32,23 +40,26 @@ type ComicPageSvc interface {
 }
 
 type comicPageSvc struct {
-	pageRepo  repo.ComicPageRepo
-	comicRepo repo.ComicRepo
-	unitRepo  repo.ComicUnitRepo
-	ossClient oss.OSSClient
+	pageRepo      repo.ComicPageRepo
+	comicRepo     repo.ComicRepo
+	comicAsgnRepo repo.ComicAsgnRepo
+	unitRepo      repo.ComicUnitRepo
+	ossClient     oss.OSSClient
 }
 
 func NewComicPageSvc(
 	pageRepo repo.ComicPageRepo,
 	comicRepo repo.ComicRepo,
+	comicAsgnRepo repo.ComicAsgnRepo,
 	unitRepo repo.ComicUnitRepo,
 	ossClient oss.OSSClient,
 ) ComicPageSvc {
 	return &comicPageSvc{
-		pageRepo:  pageRepo,
-		comicRepo: comicRepo,
-		unitRepo:  unitRepo,
-		ossClient: ossClient,
+		pageRepo:      pageRepo,
+		comicRepo:     comicRepo,
+		unitRepo:      unitRepo,
+		comicAsgnRepo: comicAsgnRepo,
+		ossClient:     ossClient,
 	}
 }
 
@@ -66,17 +77,13 @@ func (cps *comicPageSvc) GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo
 		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
 	}
 
-	// Only generate OSS URL if page is uploaded
+	// Only generate OSS URL if page is uploaded and OSSKey is present in DB
 	var ossURL string
-	if page.Uploaded {
-		// Dynamically generate OSS key: comic/{comic_id}/page_{index}
-		ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
-
-		// Get presigned URL for download
+	if page.Uploaded && page.OSSKey != "" {
 		var err error
-		ossURL, err = cps.ossClient.PresignGet(ossKey)
+		ossURL, err = cps.ossClient.PresignGet(page.OSSKey)
 		if err != nil {
-			zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", pageID), zap.String("ossKey", ossKey), zap.Error(err))
+			zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", pageID), zap.String("ossKey", page.OSSKey), zap.Error(err))
 			return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
 		}
 	}
@@ -118,29 +125,25 @@ func (cps *comicPageSvc) GetPagesByComicID(comicID string) (SvcRslt[[]model.Comi
 
 	pageInfos := make([]model.ComicPageInfo, len(pages))
 	for i, page := range pages {
-		// Only generate OSS URL if page is uploaded
-		var ossURL string
-		if page.Uploaded {
-			// Dynamically generate OSS key for each page
-			ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
-
-			// Get presigned URL for each page
-			var err error
-			ossURL, err = cps.ossClient.PresignGet(ossKey)
-			if err != nil {
-				zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", page.ID), zap.String("ossKey", ossKey), zap.Error(err))
-				return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
-			}
-		}
-
 		// Get counts from map, default to zero if not found
 		counts := countsMap[page.ID]
+
+		// Generate presigned URL only when OSSKey is present
+		var presign string
+		if page.OSSKey != "" {
+			u, err := cps.ossClient.PresignGet(page.OSSKey)
+			if err != nil {
+				zap.L().Error("Failed to generate presigned URL for page in list", zap.String("pageID", page.ID), zap.String("ossKey", page.OSSKey), zap.Error(err))
+				return SvcRslt[[]model.ComicPageInfo]{}, DB_FAILURE
+			}
+			presign = u
+		}
 
 		pageInfos[i] = model.ComicPageInfo{
 			ID:                  page.ID,
 			ComicID:             page.ComicID,
 			Index:               page.Index,
-			OSSURL:              ossURL,
+			OSSURL:              presign,
 			Uploaded:            page.Uploaded,
 			InboxUnitCount:      counts.Inbox,
 			OutboxUnitCount:     counts.Outbox,
@@ -163,6 +166,20 @@ func (cps *comicPageSvc) CreatePages(
 		return SvcRslt[[]model.CreateComicPageReply]{}, INVALID_PAGE_DATA
 	}
 
+	// Debug: Log the start of CreatePages
+	zap.L().Info("[DEBUG] CreatePages called", zap.String("opID", opID), zap.Int("argsLength", len(args)))
+
+	// Check user permission
+	asgn, err := cps.comicAsgnRepo.GetAsgnsByUserAndComicID(nil, opID, args[0].ComicID)
+	if err != nil {
+		zap.L().Error("Failed to get comic assignment for user", zap.String("userID", opID), zap.String("comicID", args[0].ComicID), zap.Error(err))
+		return SvcRslt[[]model.CreateComicPageReply]{}, PERMISSION_DENIED
+	}
+	if asgn == nil {
+		zap.L().Warn("User not assigned to comic for creating pages", zap.String("userID", opID), zap.String("comicID", args[0].ComicID))
+		return SvcRslt[[]model.CreateComicPageReply]{}, PERMISSION_DENIED
+	}
+
 	// Verify all pages belong to the same comic
 	comicID := args[0].ComicID
 	for _, arg := range args {
@@ -172,7 +189,7 @@ func (cps *comicPageSvc) CreatePages(
 	}
 
 	// Verify comic exists
-	_, err := cps.comicRepo.GetComicByID(nil, comicID)
+	_, err = cps.comicRepo.GetComicByID(nil, comicID)
 	if err != nil {
 		zap.L().Error("Failed to verify comic exists", zap.String("comicID", comicID), zap.Error(err))
 		return SvcRslt[[]model.CreateComicPageReply]{}, DB_FAILURE
@@ -194,6 +211,9 @@ func (cps *comicPageSvc) CreatePages(
 		// Dynamically generate OSS key: comic/{comic_id}/page_{index}.{ext}
 		ossKey := fmt.Sprintf("comic/%s/page_%d.%s", arg.ComicID, arg.Index, arg.ImageExt)
 
+		// Debug: Log generated ossKey
+		zap.L().Info("[DEBUG] Generated ossKey", zap.String("ossKey", ossKey))
+
 		newPages[i] = po.NewComicPage{
 			ID:       pageID,
 			ComicID:  arg.ComicID,
@@ -207,6 +227,9 @@ func (cps *comicPageSvc) CreatePages(
 			zap.L().Error("Failed to generate presigned upload URL", zap.String("ossKey", ossKey), zap.Error(err))
 			return SvcRslt[[]model.CreateComicPageReply]{}, DB_FAILURE
 		}
+
+		// Debug: Log generated uploadURL
+		zap.L().Info("[DEBUG] Generated uploadURL", zap.String("uploadURL", uploadURL))
 
 		replies[i] = model.CreateComicPageReply{
 			ID:     pageID,
@@ -223,6 +246,73 @@ func (cps *comicPageSvc) CreatePages(
 	return accept(201, replies), NO_ERROR
 }
 
+func (cps *comicPageSvc) RecreatePage(
+		opID string, 
+		args *model.RecreateComicPageArgs,
+		) (
+		SvcRslt[model.CreateComicPageReply],
+		SvcErr,
+	) {
+	// Get the comic ID of the page
+	page, err := cps.pageRepo.GetPageByID(nil, args.ID)
+	if err != nil {
+		zap.L().Error("Failed to get page for recreation", zap.String("pageID", args.ID), zap.Error(err))
+		return SvcRslt[model.CreateComicPageReply]{}, DB_FAILURE
+	}
+	if page == nil {
+		zap.L().Warn("Page not found for recreation", zap.String("pageID", args.ID))
+		return  SvcRslt[model.CreateComicPageReply]{},NOT_FOUND
+	}
+	if page.ComicID == "" {
+		zap.L().Error("Page has empty comic ID", zap.String("pageID", args.ID))
+		return SvcRslt[model.CreateComicPageReply]{}, DB_FAILURE
+	}
+
+	// Check user permission
+	asgn, err := cps.comicAsgnRepo.GetAsgnsByUserAndComicID(nil, opID, page.ComicID)
+	if err != nil {
+		zap.L().Error("Failed to get comic assignment for user", zap.String("userID", opID), zap.String("comicID", page.ComicID), zap.Error(err))
+		return  SvcRslt[model.CreateComicPageReply]{},PERMISSION_DENIED
+	}
+	if asgn == nil {
+		zap.L().Warn("User not assigned to comic for creating pages", zap.String("userID", opID), zap.String("comicID", page.ComicID))
+		return  SvcRslt[model.CreateComicPageReply]{},PERMISSION_DENIED
+	}
+
+	// Mark page as not uploaded and clear OSS key
+	falseVal := false
+	emptyVal := ""
+
+	patchPage := &po.PatchComicPage{
+		ID:       args.ID,
+		Uploaded: &falseVal	,
+		OSSKey:   &emptyVal,
+	}
+
+	err = cps.pageRepo.UpdatePageByID(nil, patchPage)
+	if err != nil {
+		zap.L().Error("Failed to recreate page", zap.String("pageID", args.ID), zap.Error(err))
+		return  SvcRslt[model.CreateComicPageReply]{},DB_FAILURE
+	}
+
+	// Generate new presigned upload URL
+	ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
+	
+	uploadURL, err := cps.ossClient.PresignPut(ossKey)
+	if err != nil {
+		zap.L().Error("Failed to generate presigned upload URL for recreated page", zap.String("ossKey", ossKey), zap.Error(err))
+		return  SvcRslt[model.CreateComicPageReply]{},DB_FAILURE
+	}
+
+	return accept(
+		200,
+		model.CreateComicPageReply{
+			ID: args.ID,
+			OSSURL: uploadURL,
+		},
+	), NO_ERROR
+}
+
 func (cps *comicPageSvc) UpdatePageByID(opID string, args *model.PatchComicPageArgs) SvcErr {
 	if args.ID == "" {
 		return INVALID_PAGE_DATA
@@ -235,9 +325,33 @@ func (cps *comicPageSvc) UpdatePageByID(opID string, args *model.PatchComicPageA
 		return DB_FAILURE
 	}
 
+	if (args.Uploaded != nil && args.ImageExt == nil) ||
+		(args.Uploaded == nil && args.ImageExt != nil) {
+		return INVALID_PAGE_DATA
+	}
+
+	var ossKey *string
+	if args.ImageExt != nil {
+		// Get the comic ID and index of the page
+		page, err := cps.pageRepo.GetPageByID(nil, args.ID)
+		if err != nil {
+			zap.L().Error("Failed to get page for OSS key generation", zap.String("pageID", args.ID), zap.Error(err))
+			return DB_FAILURE
+		}
+		if page == nil {
+			zap.L().Warn("Page not found for OSS key generation", zap.String("pageID", args.ID))
+			return NOT_FOUND
+		}
+		
+		// Dynamically generate OSS key: comic/{comic_id}/page_{index}.{ext}
+		key := fmt.Sprintf("comic/%s/page_%d.%s", page.ComicID, page.Index, *args.ImageExt)
+		ossKey = &key
+	}
+
 	// Build patch object
 	patchPage := &po.PatchComicPage{
 		ID:       args.ID,
+		OSSKey:   ossKey,
 		Uploaded: args.Uploaded,
 	}
 
@@ -250,12 +364,38 @@ func (cps *comicPageSvc) UpdatePageByID(opID string, args *model.PatchComicPageA
 }
 
 func (cps *comicPageSvc) DeletePageByID(pageID string) SvcErr {
-	if err := cps.pageRepo.DeletePageByID(nil, pageID); err != nil {
+	// First, get page info to construct OSS key
+	page, err := cps.pageRepo.GetPageByID(nil, pageID)
+	if err != nil {
 		if err == repo.REC_NOT_FOUND {
 			zap.L().Warn("Page not found for deletion", zap.String("pageID", pageID))
 			return NOT_FOUND
 		}
-		zap.L().Error("Failed to delete page", zap.String("pageID", pageID), zap.Error(err))
+		zap.L().Error("Failed to get page for deletion", zap.String("pageID", pageID), zap.Error(err))
+		return DB_FAILURE
+	}
+
+	// Delete OSS object only if OSSKey is present in DB
+	if page.OSSKey != "" {
+		ctx := context.Background()
+		if err := cps.ossClient.DeleteObject(ctx, page.OSSKey); err != nil {
+			zap.L().Error("Failed to delete OSS object",
+				zap.String("pageID", pageID),
+				zap.String("ossKey", page.OSSKey),
+				zap.Error(err))
+			return DB_FAILURE
+		}
+	} else {
+		// OSSKey empty: skip OSS deletion
+		zap.L().Info("Skipping OSS deletion because OSSKey is empty", zap.String("pageID", pageID))
+	}
+
+	// OSS deletion succeeded, now delete from DB
+	if err := cps.pageRepo.DeletePageByID(nil, pageID); err != nil {
+		// DB deletion failed after OSS deletion - this is acceptable but should be logged
+		zap.L().Error("Failed to delete page from DB after OSS deletion",
+			zap.String("pageID", pageID),
+			zap.Error(err))
 		return DB_FAILURE
 	}
 

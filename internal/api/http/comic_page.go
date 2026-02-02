@@ -74,6 +74,31 @@ func CreatePages(appState *state.AppState) iris.Handler {
 	}
 }
 
+func RecreatePage(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		var args model.RecreateComicPageArgs
+
+		if err := ctx.ReadJSON(&args); err != nil {
+			reject(ctx, iris.StatusBadRequest, "请求体格式错误")
+			return
+		}
+
+		opID := ctx.Values().GetString("user_id")
+		if opID == "" {
+			reject(ctx, iris.StatusUnauthorized, "未认证用户")
+			return
+		}
+
+		res, err := appState.ComicPageSvc.RecreatePage(opID, &args)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		accept(ctx, res)
+	}
+}
+
 func UpdatePageByID(appState *state.AppState) iris.Handler {
 	return func(ctx iris.Context) {
 		pageID := ctx.Params().Get("page_id")

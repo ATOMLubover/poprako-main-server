@@ -1,561 +1,652 @@
-# API 使用文档
+## 检查模块
 
-## 全局说明
+### 接口：检查更新
 
-**Base URL**: `/api/v1`
+- **URL**: `/check-update`
+- **请求方法**: `GET`
+- **请求头**:
+  - `X-Client-App-Version` (字符串): 客户端应用程序的版本。
 
-**认证**: 大部分端点需要 `Authorization: Bearer <token>` 请求头或 `Authorization` Cookie。登录成功后返回 token 并自动设置 Cookie。
+#### 参数 DTO
 
-**响应格式**: 统一包装为 `{"code": <uint16>, "msg": "<string>", "data": <T|null>}`
+- **CheckVersionReply**:
+  - `latest_version` (字符串): 应用程序的最新版本。
+  - `title` (字符串): 更新的标题。
+  - `description` (字符串): 更新的描述。
+  - `allow_usage` (布尔值): 指示客户端是否允许继续使用应用程序。
 
-- 成功时 `data` 有值，`msg` 为空
-- 失败时 `msg` 有值，`data` 为 null
+## 漫画模块
 
----
+### 接口：根据ID获取漫画信息
 
-## 常见 HTTP 状态码
+- **URL**: `/comics/{comic_id}`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
 
-| 状态码 | 含义                                    |
-| ------ | --------------------------------------- |
-| 200    | 成功（OK）                              |
-| 201    | 创建成功（Created）                     |
-| 204    | 成功但无返回内容（No Content）          |
-| 400    | 请求参数错误（Bad Request）             |
-| 401    | 未认证或令牌无效（Unauthorized）        |
-| 403    | 权限不足（Forbidden）                   |
-| 404    | 资源不存在（Not Found）                 |
-| 500    | 服务器内部错误（Internal Server Error） |
+#### 响应 DTO
 
-**注**: 响应 JSON 中的 `code` 字段与 HTTP 状态码一致，`msg` 字段包含具体错误信息（中文）。
+- **ComicInfo**:
+  - `id` (字符串): 漫画的唯一标识符。
+  - `workset_id` (字符串): 所属工作集的ID。
+  - `workset_index` (整数): 工作集中的索引。
+  - `index` (整数): 漫画的索引。
+  - `creator_id` (字符串): 创建者的ID。
+  - `creator_nickname` (字符串): 创建者的昵称。
+  - `author` (字符串): 作者名称。
+  - `title` (字符串): 漫画标题。
+  - `description` (字符串，可选): 漫画描述。
+  - `comment` (字符串，可选): 漫画评论。
+  - `page_count` (整数): 页数。
+  - `translating_started_at` (整数，可选): 翻译开始时间戳。
+  - `translating_completed_at` (整数，可选): 翻译完成时间戳。
+  - `proofreading_started_at` (整数，可选): 校对开始时间戳。
+  - `proofreading_completed_at` (整数，可选): 校对完成时间戳。
+  - `typesetting_started_at` (整数，可选): 排版开始时间戳。
+  - `typesetting_completed_at` (整数，可选): 排版完成时间戳。
+  - `reviewing_completed_at` (整数，可选): 审核完成时间戳。
+  - `uploading_completed_at` (整数，可选): 上传完成时间戳。
 
----
+### 接口：根据工作集ID获取漫画简要信息
 
-## JSON 字段类型
+- **URL**: `/worksets/{workset_id}/comics`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `workset_id` (字符串): 工作集的唯一标识符。
+- **查询参数**:
+  - `limit` (整数，默认值: 10): 返回的最大记录数。
+  - `offset` (整数，默认值: 0): 返回记录的偏移量。
 
-- `string`: 字符串
-- `int` / `int64`: 整数
-- `bool`: 布尔值
-- `float64`: 浮点数
-- `array`: 数组
-- `object`: 对象
+#### 响应 DTO
 
-**时间戳**: 所有时间戳字段（如 `created_at`、`updated_at`、`*_started_at`、`*_completed_at`）均为 **整数，单位为秒（Unix timestamp）**。
-
----
-
-## PATCH（部分更新）语义
-
-**规则**:
-
-- **为 null 或不携带的字段不会被更新**
-- **一旦携带（即在请求 JSON 中出现），该字段必然会被更新为新值**
-- **前端绝对不允许在字段值未发生改变的情况下携带冗余字段，以防竞态条件导致意外覆盖**
-
-**示例**: 若要清空可选字符串字段，发送空字符串 `""`；若要保持不变，则完全省略该字段或发送 `null`。
-
-**适用端点**: `PATCH /users/{id}`, `PATCH /worksets/{id}`, `PATCH /comics/{id}`, `PATCH /pages/{id}`, `PATCH /pages/{page_id}/units`, `PATCH /assignments/{id}`
-
----
-
-## 端点列表
-
-### 1. 客户端版本检查
-
-**`GET /api/v1/check-update`** — 检查客户端版本是否需要更新  
-**认证**: 无  
-**Headers**: `X-Client-App-Version: string` (必需)  
-**响应**: `{code, msg, data: {latest_version, title, description, allow_usage}}`
-
-```bash
-curl -X GET "http://localhost/api/v1/check-update" -H "X-Client-App-Version: 1.2.3"
-```
-
----
-
-### 2. 用户认证与管理
-
-#### **`POST /api/v1/login`** — 用户登录
-
-**认证**: 无  
-**Body**: `{qq: string, password: string, nickname?: string, invitation_code?: string}`  
-**响应**: `{code, msg, data: {token: string}}` + 设置 `Authorization` Cookie
-
-```bash
-curl -X POST "http://localhost/api/v1/login" -H "Content-Type: application/json" -d '{"qq":"12345","password":"pwd"}'
-```
-
-#### **`GET /api/v1/users/me`** — 获取当前用户信息
-
-**认证**: 必需  
-**响应**: `{code, msg, data: UserInfo}`
-
-```bash
-curl -X GET "http://localhost/api/v1/users/me" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/users`** — 查询用户列表
-
-**认证**: 必需  
-**Query**: `offset=0&limit=10&nn=<nickname>&qq=<qq>&ia=<bool>&itsl=<bool>&ipr=<bool>...`  
-**响应**: `{code, msg, data: [UserInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/users?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/users/{user_id}`** — 获取指定用户信息
-
-**认证**: 必需  
-**Path**: `user_id: string`  
-**响应**: `{code, msg, data: UserInfo}` | `404`
-
-```bash
-curl -X GET "http://localhost/api/v1/users/u123" -H "Authorization: Bearer <token>"
-```
-
-#### **`PATCH /api/v1/users/{user_id}`** — 更新用户信息
-
-**认证**: 必需  
-**Path**: `user_id: string`  
-**Body**: `{id: string, qq?: string, nickname?: string}` — `id` 必须与路径匹配  
-**可更新字段**: `qq`, `nickname` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/users/u1" -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{"id":"u1","nickname":"new"}'
-```
-
-#### **`PATCH /api/v1/users/{user_id}/roles`** — 分配/取消用户角色
-
-**认证**: 必需  
-**Path**: `user_id: string`  
-**Body**: `{id: string, roles: [{role: string, assigned: bool}, ...]}`  
-**可用角色**: `translator`, `proofreader`, `typesetter`, `redrawer`, `reviewer`, `uploader`  
-**响应**: `204 No Content` | `403`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/users/u1/roles" -H "Authorization: Bearer <token>" -d '{"id":"u1","roles":[{"role":"translator","assigned":true}]}'
-```
+- **ComicBrief**:
+  - `id` (字符串): 漫画的唯一标识符。
+  - `workset_id` (字符串): 所属工作集的ID。
+  - `workset_index` (整数): 工作集中的索引。
+  - `index` (整数): 漫画的索引。
+  - `author` (字符串): 作者名称。
+  - `title` (字符串): 漫画标题。
+  - `page_count` (整数): 页数。
+  - `translating_started_at` (整数，可选): 翻译开始时间戳。
+  - `translating_completed_at` (整数，可选): 翻译完成时间戳。
+  - `proofreading_started_at` (整数，可选): 校对开始时间戳。
+  - `proofreading_completed_at` (整数，可选): 校对完成时间戳。
+  - `typesetting_started_at` (整数，可选): 排版开始时间戳。
+  - `typesetting_completed_at` (整数，可选): 排版完成时间戳。
+  - `reviewing_completed_at` (整数，可选): 审核完成时间戳。
+  - `uploading_completed_at` (整数，可选): 上传完成时间戳。
 
 ---
 
-### 3. 邀请管理
+### 接口：检索漫画简要信息
 
-#### **`POST /api/v1/users/invitations`** — 创建邀请码
+- **URL**: `/comics`
+- **请求方法**: `GET`
+- **查询参数**:
+  - `aut` (字符串，可选): 作者名称（模糊查询）。
+  - `tit` (字符串，可选): 漫画标题（模糊查询）。
+  - `widx` (字符串，可选): 工作集索引。
+  - `idx` (字符串，可选): 漫画索引。
+  - `tsl_pending` (布尔值，可选): 是否未开始翻译。
+  - `tsl_wip` (布尔值，可选): 是否正在翻译中。
+  - `tsl_fin` (布尔值，可选): 是否已完成翻译。
+  - `pr_pending` (布尔值，可选): 是否未开始校对。
+  - `pr_wip` (布尔值，可选): 是否正在校对中。
+  - `pr_fin` (布尔值，可选): 是否已完成校对。
+  - `tst_pending` (布尔值，可选): 是否未开始排版。
+  - `tst_wip` (布尔值，可选): 是否正在排版中。
+  - `tst_fin` (布尔值，可选): 是否已完成排版。
+  - `rv_pending` (布尔值，可选): 是否未开始审核。
+  - `rv_fin` (布尔值，可选): 是否已完成审核。
+  - `ul_pending` (布尔值，可选): 是否未开始上传。
+  - `ul_fin` (布尔值，可选): 是否已完成上传。
+  - `auid` (字符串，可选): 分配的用户ID。
+  - `offset` (整数): 偏移量。
+  - `limit` (整数): 返回的最大记录数。
 
-**认证**: 必需  
-**Body**: `{invitee_qq: string, assign_translator?: bool, assign_proofreader?: bool, ...}`  
-**响应**: `{code, msg, data: {invitation_code: string}}`
+#### 响应 DTO
 
-```bash
-curl -X POST "http://localhost/api/v1/users/invitations" -H "Authorization: Bearer <token>" -d '{"invitee_qq":"99999"}'
-```
-
-#### **`GET /api/v1/users/invitations`** — 获取我创建的邀请列表
-
-**认证**: 必需  
-**响应**: `{code, msg, data: [InvitationInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/users/invitations" -H "Authorization: Bearer <token>"
-```
-
----
-
-### 4. 工作集（Workset）管理
-
-#### **`GET /api/v1/worksets`** — 获取工作集列表
-
-**认证**: 必需  
-**Query**: `offset=0&limit=10`  
-**响应**: `{code, msg, data: [WorksetInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/worksets?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/worksets/{workset_id}`** — 获取工作集详情
-
-**认证**: 必需  
-**Path**: `workset_id: string`  
-**响应**: `{code, msg, data: WorksetInfo}` | `404`
-
-```bash
-curl -X GET "http://localhost/api/v1/worksets/w1" -H "Authorization: Bearer <token>"
-```
-
-#### **`POST /api/v1/worksets`** — 创建工作集
-
-**认证**: 必需（仅管理员）  
-**Body**: `{name: string, description?: string}`  
-**响应**: `{code, msg, data: {id: string}}`
-
-```bash
-curl -X POST "http://localhost/api/v1/worksets" -H "Authorization: Bearer <token>" -d '{"name":"NewWS"}'
-```
-
-#### **`PATCH /api/v1/worksets/{workset_id}`** — 更新工作集
-
-**认证**: 必需  
-**Path**: `workset_id: string`  
-**Body**: `{id?: string, description?: string}`  
-**可更新字段**: `description` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/worksets/w1" -H "Authorization: Bearer <token>" -d '{"description":"new desc"}'
-```
-
-#### **`DELETE /api/v1/worksets/{workset_id}`** — 删除工作集
-
-**认证**: 必需  
-**Path**: `workset_id: string`  
-**响应**: `204 No Content` | `404`
-
-```bash
-curl -X DELETE "http://localhost/api/v1/worksets/w1" -H "Authorization: Bearer <token>"
-```
+- **ComicBrief**: 同上。
 
 ---
 
-### 5. 漫画（Comic）管理
+### 接口：创建漫画
 
-#### **`GET /api/v1/comics`** — 搜索/查询漫画列表
+- **URL**: `/comics`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **CreateComicArgs**:
+    - `workset_id` (字符串): 工作集的唯一标识符。
+    - `author` (字符串): 作者名称。
+    - `title` (字符串): 漫画标题。
+    - `description` (字符串，可选): 漫画描述。
+    - `comment` (字符串，可选): 漫画评论。
+    - `pre_asgns` (数组，可选): 预分配信息，包含以下字段：
+      - `assignee_id` (字符串): 分配的用户ID。
+      - `is_translator` (布尔值，可选): 是否为翻译者。
+      - `is_proofreader` (布尔值，可选): 是否为校对者。
+      - `is_typesetter` (布尔值，可选): 是否为排版者。
+      - `is_redrawer` (布尔值，可选): 是否为修图者。
+      - `is_reviewer` (布尔值，可选): 是否为审核者。
 
-**认证**: 必需  
-**Query**: `offset=0&limit=10&aut=<author>&tit=<title>&wid=<workset_id>&auid=<assigned_user_id>&tsl_pending=<bool>&tsl_wip=<bool>...`  
-**响应**: `{code, msg, data: [ComicBrief, ...]}`
+#### 响应 DTO
 
-```bash
-curl -X GET "http://localhost/api/v1/comics?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/comics/{comic_id}`** — 获取漫画详情
-
-**认证**: 必需  
-**Path**: `comic_id: string`  
-**响应**: `{code, msg, data: ComicInfo}` | `404`
-
-```bash
-curl -X GET "http://localhost/api/v1/comics/c1" -H "Authorization: Bearer <token>"
-```
-
-#### **`POST /api/v1/comics`** — 创建漫画
-
-**认证**: 必需  
-**Body**: `{workset_id: string, author: string, title: string, description?: string, comment?: string, pre_asgns?: [...]}`  
-**响应**: `{code, msg, data: {id: string}}`
-
-```bash
-curl -X POST "http://localhost/api/v1/comics" -H "Authorization: Bearer <token>" -d '{"workset_id":"w1","author":"a","title":"t"}'
-```
-
-#### **`PATCH /api/v1/comics/{comic_id}`** — 更新漫画元数据
-
-**认证**: 必需  
-**Path**: `comic_id: string`  
-**Body**: `{id?: string, author?: string, title?: string, description?: string, comment?: string}`  
-**可更新字段**: `author`, `title`, `description`, `comment` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/comics/c1" -H "Authorization: Bearer <token>" -d '{"title":"NewTitle"}'
-```
-
-#### **`DELETE /api/v1/comics/{comic_id}`** — 删除漫画
-
-**认证**: 必需  
-**Path**: `comic_id: string`  
-**响应**: `204 No Content` | `404`
-
-```bash
-curl -X DELETE "http://localhost/api/v1/comics/c1" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/worksets/{workset_id}/comics`** — 获取工作集下的漫画列表
-
-**认证**: 必需  
-**Path**: `workset_id: string`  
-**Query**: `offset=0&limit=10`  
-**响应**: `{code, msg, data: [ComicBrief, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/worksets/w1/comics?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
+- **CreateComicReply**:
+  - `id` (字符串): 创建的漫画的唯一标识符。
 
 ---
 
-### 6. 页面（Page）管理
+### 接口：根据ID更新漫画
 
-#### **`GET /api/v1/pages/{page_id}`** — 获取页面详情
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**响应**: `{code, msg, data: ComicPageInfo}`
-
-```bash
-curl -X GET "http://localhost/api/v1/pages/p1" -H "Authorization: Bearer <token>"
-```
-
-#### **`POST /api/v1/pages`** — 批量创建页面
-
-**认证**: 必需  
-**Body**: `[{comic_id: string, index: int64, image_ext: string}, ...]`  
-**响应**: `{code, msg, data: [{id: string, oss_url: string}, ...]}`
-
-```bash
-curl -X POST "http://localhost/api/v1/pages" -H "Authorization: Bearer <token>" -d '[{"comic_id":"c1","index":1,"image_ext":"jpg"}]'
-```
-
-#### **`PATCH /api/v1/pages/{page_id}`** — 更新页面状态
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**Body**: `{id?: string, uploaded?: bool}`  
-**可更新字段**: `uploaded` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/pages/p1" -H "Authorization: Bearer <token>" -d '{"uploaded":true}'
-```
-
-#### **`DELETE /api/v1/pages/{page_id}`** — 删除页面
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**响应**: `204 No Content`
-
-```bash
-curl -X DELETE "http://localhost/api/v1/pages/p1" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/comics/{comic_id}/pages`** — 获取漫画的页面列表
-
-**认证**: 必需  
-**Path**: `comic_id: string`  
-**响应**: `{code, msg, data: [ComicPageInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/comics/c1/pages" -H "Authorization: Bearer <token>"
-```
+- **URL**: `/comics/{comic_id}`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
+- **请求体 DTO**:
+  - **UpdateComicArgs**:
+    - `id` (字符串): 漫画的唯一标识符。
+    - `author` (字符串，可选): 作者名称。
+    - `title` (字符串，可选): 漫画标题。
+    - `description` (字符串，可选): 漫画描述。
+    - `comment` (字符串，可选): 漫画评论。
+    - `translating_started` (布尔值，可选): 是否开始翻译。
+    - `translating_completed` (布尔值，可选): 是否完成翻译。
+    - `proofreading_started` (布尔值，可选): 是否开始校对。
+    - `proofreading_completed` (布尔值，可选): 是否完成校对。
+    - `typesetting_started` (布尔值，可选): 是否开始排版。
+    - `typesetting_completed` (布尔值，可选): 是否完成排版。
+    - `reviewing_completed` (布尔值，可选): 是否完成审核。
+    - `uploading_completed` (布尔值，可选): 是否完成上传。
 
 ---
 
-### 7. 翻译单元（Unit）管理
+### 接口：根据ID删除漫画
 
-#### **`GET /api/v1/pages/{page_id}/units`** — 获取页面的翻译单元列表
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**响应**: `{code, msg, data: [ComicUnitInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/pages/p1/units" -H "Authorization: Bearer <token>"
-```
-
-#### **`POST /api/v1/pages/{page_id}/units`** — 批量创建翻译单元
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**Body**: `[{page_id: string, index: int64, x_coordinate: float64, y_coordinate: float64, is_in_box: bool, translated_text?: string, ...}, ...]`  
-**响应**: `201 Created`
-
-```bash
-curl -X POST "http://localhost/api/v1/pages/p1/units" -H "Authorization: Bearer <token>" -d '[{"page_id":"p1","index":1,"x_coordinate":1.0,"y_coordinate":2.0,"is_in_box":true}]'
-```
-
-#### **`PATCH /api/v1/pages/{page_id}/units`** — 批量更新翻译单元
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**Body**: `[{id: string, index?: int64, x_coordinate?: float64, y_coordinate?: float64, is_in_box?: bool, translated_text?: string, translator_comment?: string, proved_text?: string, proved?: bool, proofreader_comment?: string}, ...]`  
-**可更新字段**: `index`, `x_coordinate`, `y_coordinate`, `is_in_box`, `translated_text`, `translator_comment`, `proved_text`, `proved`, `proofreader_comment` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/pages/p1/units" -H "Authorization: Bearer <token>" -d '[{"id":"u1","translated_text":"new"}]'
-```
-
-#### **`DELETE /api/v1/pages/{page_id}/units`** — 批量删除翻译单元
-
-**认证**: 必需  
-**Path**: `page_id: string`  
-**Body**: `["unit_id1", "unit_id2", ...]`  
-**响应**: `204 No Content`
-
-```bash
-curl -X DELETE "http://localhost/api/v1/pages/p1/units" -H "Authorization: Bearer <token>" -d '["u1","u2"]'
-```
+- **URL**: `/comics/{comic_id}`
+- **请求方法**: `DELETE`
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
 
 ---
 
-### 8. 任务分配（Assignment）管理
+## 漫画分配模块
 
-#### **`GET /api/v1/assignments/{asgn_id}`** — 获取分配详情
+### 接口：根据ID获取分配信息
 
-**认证**: 必需  
-**Path**: `asgn_id: string`  
-**响应**: `{code, msg, data: ComicAsgnInfo}` | `404`
+- **URL**: `/assignments/{asgn_id}`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `asgn_id` (字符串): 分配的唯一标识符。
 
-```bash
-curl -X GET "http://localhost/api/v1/assignments/a1" -H "Authorization: Bearer <token>"
-```
+#### 响应 DTO
 
-#### **`POST /api/v1/assignments`** — 创建任务分配
-
-**认证**: 必需  
-**Body**: `{comic_id: string, assignee_id: string, is_translator?: bool, is_proofreader?: bool, ...}`  
-**响应**: `{code, msg, data: {...}}`
-
-```bash
-curl -X POST "http://localhost/api/v1/assignments" -H "Authorization: Bearer <token>" -d '{"comic_id":"c1","assignee_id":"u1"}'
-```
-
-#### **`PATCH /api/v1/assignments/{asgn_id}`** — 更新分配角色
-
-**认证**: 必需  
-**Path**: `asgn_id: string`  
-**Body**: `{id?: string, is_translator?: bool, is_proofreader?: bool, is_typesetter?: bool, is_redrawer?: bool, is_reviewer?: bool}`  
-**可更新字段**: `is_translator`, `is_proofreader`, `is_typesetter`, `is_redrawer`, `is_reviewer` (PATCH语义：省略/null=不更新；携带=更新)  
-**响应**: `204 No Content`
-
-```bash
-curl -X PATCH "http://localhost/api/v1/assignments/a1" -H "Authorization: Bearer <token>" -d '{"is_translator":true}'
-```
-
-#### **`DELETE /api/v1/assignments/{asgn_id}`** — 删除分配
-
-**认证**: 必需  
-**Path**: `asgn_id: string`  
-**响应**: `204 No Content`
-
-```bash
-curl -X DELETE "http://localhost/api/v1/assignments/a1" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/comics/{comic_id}/assignments`** — 获取漫画的分配列表
-
-**认证**: 必需  
-**Path**: `comic_id: string`  
-**Query**: `offset=0&limit=10`  
-**响应**: `{code, msg, data: [ComicAsgnInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/comics/c1/assignments?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
-
-#### **`GET /api/v1/users/{user_id}/assignments`** — 获取用户的分配列表
-
-**认证**: 必需  
-**Path**: `user_id: string`  
-**Query**: `offset=0&limit=10`  
-**响应**: `{code, msg, data: [ComicAsgnInfo, ...]}`
-
-```bash
-curl -X GET "http://localhost/api/v1/users/u1/assignments?offset=0&limit=10" -H "Authorization: Bearer <token>"
-```
+- **ComicAsgnInfo**:
+  - `id` (字符串): 分配的唯一标识符。
+  - `comic_id` (字符串): 漫画的唯一标识符。
+  - `user_id` (字符串): 用户的唯一标识符。
+  - `user_nickname` (字符串): 用户昵称。
+  - `assigned_translator_at` (整数，可选): 分配翻译者的时间戳。
+  - `assigned_proofreader_at` (整数，可选): 分配校对者的时间戳。
+  - `assigned_typesetter_at` (整数，可选): 分配排版者的时间戳。
+  - `assigned_redrawer_at` (整数，可选): 分配修图者的时间戳。
+  - `assigned_reviewer_at` (整数，可选): 分配审核者的时间戳。
+  - `created_at` (整数): 创建时间戳。
+  - `updated_at` (整数): 更新时间戳。
 
 ---
 
-## 数据模型示例
+### 接口：根据漫画ID获取分配信息
 
-### UserInfo
+- **URL**: `/comics/{comic_id}/assignments`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
+- **查询参数**:
+  - `limit` (整数，默认值: 10): 返回的最大记录数。
+  - `offset` (整数，默认值: 0): 返回记录的偏移量。
 
-```json
-{
-  "id": "string",
-  "qq": "string",
-  "nickname": "string",
-  "assigned_translator_at": int64 | null,
-  "assigned_proofreader_at": int64 | null,
-  "assigned_typesetter_at": int64 | null,
-  "assigned_redrawer_at": int64 | null,
-  "assigned_reviewer_at": int64 | null,
-  "assigned_uploader_at": int64 | null,
-  "is_admin": bool,
-  "created_at": int64
-}
-```
+#### 响应 DTO
 
-### WorksetInfo
+- **ComicAsgnInfo**: 同上。
 
-```json
-{
-  "id": "string",
-  "index": int64,
-  "name": "string",
-  "comic_count": int64,
-  "description": "string" | null,
-  "creator_id": "string",
-  "creator_nickname": "string",
-  "created_at": int64,
-  "updated_at": int64
-}
-```
+---
 
-### ComicInfo
+### 接口：根据用户ID获取分配信息
 
-```json
-{
-  "id": "string",
-  "workset_id": "string",
-  "workset_index": int,
-  "index": int64,
-  "creator_id": "string",
-  "creator_nickname": "string",
-  "author": "string",
-  "title": "string",
-  "description": "string" | null,
-  "comment": "string" | null,
-  "page_count": int64,
-  "translating_started_at": int64 | null,
-  "translating_completed_at": int64 | null,
-  "proofreading_started_at": int64 | null,
-  "proofreading_completed_at": int64 | null,
-  "typesetting_started_at": int64 | null,
-  "typesetting_completed_at": int64 | null,
-  "reviewing_completed_at": int64 | null,
-  "uploading_completed_at": int64 | null,
-  "created_at": int64,
-  "updated_at": int64
-}
-```
+- **URL**: `/users/{user_id}/assignments`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `user_id` (字符串): 用户的唯一标识符。
+- **查询参数**:
+  - `limit` (整数，默认值: 10): 返回的最大记录数。
+  - `offset` (整数，默认值: 0): 返回记录的偏移量。
 
-### ComicPageInfo
+#### 响应 DTO
 
-```json
-{
-  "id": "string",
-  "comic_id": "string",
-  "index": int64,
-  "oss_url": "string",
-  "uploaded": bool,
-  "inbox_unit_count": int64,
-  "outbox_unit_count": int64,
-  "translated_unit_count": int64,
-  "proved_unit_count": int64
-}
-```
+- **ComicAsgnInfo**: 同上。
 
-### ComicUnitInfo
+---
 
-```json
-{
-  "id": "string",
-  "page_id": "string",
-  "index": int64,
-  "x_coordinate": float64,
-  "y_coordinate": float64,
-  "is_in_box": bool,
-  "translated_text": "string" | null,
-  "translator_id": "string" | null,
-  "translator_comment": "string" | null,
-  "proved_text": "string" | null,
-  "proved": bool,
-  "proofreader_id": "string" | null,
-  "proofreader_comment": "string" | null,
-  "creator_id": "string" | null,
-  "created_at": int64,
-  "updated_at": int64
-}
-```
+### 接口：创建分配
+
+- **URL**: `/assignments`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **CreateComicAsgnArgs**:
+    - `comic_id` (字符串): 漫画的唯一标识符。
+    - `assignee_id` (字符串): 被分配的用户ID。
+    - `is_translator` (布尔值，可选): 是否为翻译者。
+    - `is_proofreader` (布尔值，可选): 是否为校对者。
+    - `is_typesetter` (布尔值，可选): 是否为排版者。
+    - `is_redrawer` (布尔值，可选): 是否为修图者。
+    - `is_reviewer` (布尔值，可选): 是否为审核者。
+
+#### 响应 DTO
+
+- **ComicAsgnInfo**: 同上。
+
+---
+
+### 接口：根据ID更新分配
+
+- **URL**: `/assignments/{asgn_id}`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `asgn_id` (字符串): 分配的唯一标识符。
+- **请求体 DTO**:
+  - **UpdateComicAsgnArgs**:
+    - `id` (字符串): 分配的唯一标识符。
+    - `is_translator` (布尔值，可选): 是否为翻译者。
+    - `is_proofreader` (布尔值，可选): 是否为校对者。
+    - `is_typesetter` (布尔值，可选): 是否为排版者。
+    - `is_redrawer` (布尔值，可选): 是否为修图者。
+    - `is_reviewer` (布尔值，可选): 是否为审核者。
+
+---
+
+### 接口：根据ID删除分配
+
+- **URL**: `/assignments/{asgn_id}`
+- **请求方法**: `DELETE`
+- **路径参数**:
+  - `asgn_id` (字符串): 分配的唯一标识符。
+
+---
+
+## 漫画页面模块
+
+### 接口：根据ID获取页面信息
+
+- **URL**: `/pages/{page_id}`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `page_id` (字符串): 页面唯一标识符。
+
+#### 响应 DTO
+
+- **ComicPageInfo**:
+  - `id` (字符串): 页面唯一标识符。
+  - `comic_id` (字符串): 所属漫画的唯一标识符。
+  - `index` (整数): 页面索引。
+  - `oss_url` (字符串): 页面存储的OSS URL。
+  - `uploaded` (布尔值): 页面是否已上传。
+  - `inbox_unit_count` (整数): 收件箱单元数量。
+  - `outbox_unit_count` (整数): 发件箱单元数量。
+  - `translated_unit_count` (整数): 已翻译单元数量。
+  - `proved_unit_count` (整数): 已校对单元数量。
+
+---
+
+### 接口：根据漫画ID获取页面信息
+
+- **URL**: `/comics/{comic_id}/pages`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
+
+#### 响应 DTO
+
+- **ComicPageInfo**: 同上。
+
+---
+
+### 接口：创建页面
+
+- **URL**: `/pages`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **CreateComicPageArgs**:
+    - `comic_id` (字符串): 所属漫画的唯一标识符。
+    - `index` (整数): 页面索引。
+    - `image_ext` (字符串): 图片扩展名。
+
+#### 响应 DTO
+
+- **CreateComicPageReply**:
+  - `id` (字符串): 创建的页面唯一标识符。
+  - `oss_url` (字符串): 页面存储的OSS URL。
+
+---
+
+### 接口：重新创建页面
+
+- **URL**: `/pages/recreate`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **RecreateComicPageArgs**:
+    - `id` (字符串): 页面唯一标识符。
+    - `image_ext` (字符串): 图片扩展名。
+
+#### 响应 DTO
+
+- **CreateComicPageReply**:
+  - `id` (字符串): 页面唯一标识符。
+  - `oss_url` (字符串): 页面存储的OSS URL。
+
+---
+
+### 接口：根据ID更新页面
+
+- **URL**: `/pages/{page_id}`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `page_id` (字符串): 页面唯一标识符。
+- **请求体 DTO**:
+  - **PatchComicPageArgs**:
+    - `id` (字符串): 页面唯一标识符。
+    - `image_ext` (字符串，可选): 图片扩展名。
+    - `uploaded` (布尔值，可选): 页面是否已上传。
+
+---
+
+### 接口：根据ID删除页面
+
+- **URL**: `/pages/{page_id}`
+- **请求方法**: `DELETE`
+- **路径参数**:
+  - `page_id` (字符串): 页面唯一标识符。
+
+---
+
+## 漫画翻译单元模块
+
+### 接口：根据页面ID获取翻译单元
+
+- **URL**: `/pages/{page_id}/units`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `page_id` (字符串): 页面唯一标识符。
+
+#### 响应 DTO
+
+- **ComicUnitInfo**:
+  - `id` (字符串): 翻译单元的唯一标识符。
+  - `page_id` (字符串): 所属页面的唯一标识符。
+  - `index` (整数): 翻译单元的索引。
+  - `x_coordinate` (浮点数): X 坐标。
+  - `y_coordinate` (浮点数): Y 坐标。
+  - `is_in_box` (布尔值): 是否在文本框内。
+  - `translated_text` (字符串，可选): 翻译后的文本。
+  - `translator_id` (字符串，可选): 翻译者的唯一标识符。
+  - `translator_comment` (字符串，可选): 翻译者的评论。
+  - `proved_text` (字符串，可选): 校对后的文本。
+  - `proved` (布尔值): 是否已校对。
+  - `proofreader_id` (字符串，可选): 校对者的唯一标识符。
+  - `proofreader_comment` (字符串，可选): 校对者的评论。
+  - `creator_id` (字符串，可选): 创建者的唯一标识符。
+  - `created_at` (整数): 创建时间戳。
+  - `updated_at` (整数): 更新时间戳。
+
+---
+
+### 接口：创建翻译单元
+
+- **URL**: `/pages/{page_id}/units`
+- **请求方法**: `POST`
+- **路径参数**:
+  - `page_id` (字符串): 页面唯一标识符。
+- **请求体 DTO**:
+  - **NewComicUnitArgs**:
+    - `page_id` (字符串): 所属页面的唯一标识符。
+    - `index` (整数): 翻译单元的索引。
+    - `x_coordinate` (浮点数): X 坐标。
+    - `y_coordinate` (浮点数): Y 坐标。
+    - `is_in_box` (布尔值): 是否在文本框内。
+    - `translated_text` (字符串，可选): 翻译后的文本。
+    - `translator_comment` (字符串，可选): 翻译者的评论。
+    - `proved_text` (字符串，可选): 校对后的文本。
+    - `proved` (布尔值): 是否已校对。
+    - `proofreader_comment` (字符串，可选): 校对者的评论。
+
+---
+
+### 接口：更新翻译单元
+
+- **URL**: `/units`
+- **请求方法**: `PUT`
+- **请求体 DTO**:
+  - **PatchComicUnitArgs**:
+    - `id` (字符串): 翻译单元的唯一标识符。
+    - `index` (整数，可选): 翻译单元的索引。
+    - `x_coordinate` (浮点数，可选): X 坐标。
+    - `y_coordinate` (浮点数，可选): Y 坐标。
+    - `is_in_box` (布尔值，可选): 是否在文本框内。
+    - `translated_text` (字符串，可选): 翻译后的文本。
+    - `translator_comment` (字符串，可选): 翻译者的评论。
+    - `proved_text` (字符串，可选): 校对后的文本。
+    - `proved` (布尔值，可选): 是否已校对。
+    - `proofreader_comment` (字符串，可选): 校对者的评论。
+
+---
+
+### 接口：删除翻译单元
+
+- **URL**: `/units`
+- **请求方法**: `DELETE`
+- **请求体 DTO**:
+  - `unit_ids` (数组): 要删除的翻译单元ID列表。
+
+---
+
+## 用户模块
+
+### 接口：获取当前用户信息
+
+- **URL**: `/users/me`
+- **请求方法**: `GET`
+
+#### 响应 DTO
+
+- **UserInfo**:
+  - `id` (字符串): 用户的唯一标识符。
+  - `qq` (字符串): 用户的QQ号。
+  - `nickname` (字符串): 用户昵称。
+  - `assigned_translator_at` (整数，可选): 分配为翻译者的时间戳。
+  - `assigned_proofreader_at` (整数，可选): 分配为校对者的时间戳。
+  - `assigned_typesetter_at` (整数，可选): 分配为排版者的时间戳。
+  - `assigned_redrawer_at` (整数，可选): 分配为修图者的时间戳。
+  - `assigned_reviewer_at` (整数，可选): 分配为审核者的时间戳。
+  - `assigned_uploader_at` (整数，可选): 分配为上传者的时间戳。
+  - `is_admin` (布尔值): 是否为管理员。
+  - `created_at` (整数): 用户创建时间戳。
+
+---
+
+### 接口：根据ID获取用户信息
+
+- **URL**: `/users/{user_id}`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `user_id` (字符串): 用户的唯一标识符。
+
+#### 响应 DTO
+
+- **UserInfo**: 同上。
+
+---
+
+### 接口：更新用户信息
+
+- **URL**: `/users/{user_id}`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `user_id` (字符串): 用户的唯一标识符。
+- **请求体 DTO**:
+  - **UpdateUserArgs**:
+    - `id` (字符串): 用户的唯一标识符。
+    - `qq` (字符串，可选): 用户的QQ号。
+    - `nickname` (字符串，可选): 用户昵称。
+
+---
+
+### 接口：邀请用户
+
+- **URL**: `/invitations`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **CreateInvitationArgs**: 请参考邀请模块的文档。
+
+---
+
+### 接口：获取邀请信息
+
+- **URL**: `/invitations`
+- **请求方法**: `GET`
+
+#### 响应 DTO
+
+- **InvitationInfo**: 请参考邀请模块的文档。
+
+---
+
+### 接口：用户登录
+
+- **URL**: `/login`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **LoginArgs**:
+    - `qq` (字符串): 用户的QQ号。
+    - `password` (字符串): 用户密码。
+    - `nickname` (字符串，可选): 用户昵称。
+    - `invitation_code` (字符串，可选): 邀请码。
+
+#### 响应 DTO
+
+- **LoginReply**:
+  - `token` (字符串): 用户的认证令牌。
+
+---
+
+### 接口：检索用户信息
+
+- **URL**: `/users`
+- **请求方法**: `GET`
+- **查询参数**:
+  - `nn` (字符串，可选): 用户昵称（模糊查询）。
+  - `qq` (字符串，可选): 用户的QQ号。
+  - `ia` (布尔值，可选): 是否为管理员。
+  - `itsl` (布尔值，可选): 是否为翻译者。
+  - `ipr` (布尔值，可选): 是否为校对者。
+  - `itst` (布尔值，可选): 是否为排版者。
+  - `ird` (布尔值，可选): 是否为修图者。
+  - `irv` (布尔值，可选): 是否为审核者。
+  - `iul` (布尔值，可选): 是否为上传者。
+  - `offset` (整数): 偏移量。
+  - `limit` (整数): 返回的最大记录数。
+
+#### 响应 DTO
+
+- **UserInfo**: 同上。
+
+---
+
+### 接口：分配用户角色
+
+- **URL**: `/users/{user_id}/roles`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `user_id` (字符串): 用户的唯一标识符。
+- **请求体 DTO**:
+  - **AssignUserRoleArgs**:
+    - `id` (字符串): 用户的唯一标识符。
+    - `roles` (数组): 用户角色分配列表，包含以下字段：
+      - `role` (字符串): 角色名称。
+      - `assigned` (布尔值): 是否分配该角色。
+
+---
+
+## 工作集模块
+
+### 接口：根据ID获取工作集信息
+
+- **URL**: `/worksets/{workset_id}`
+- **请求方法**: `GET`
+- **路径参数**:
+  - `workset_id` (字符串): 工作集的唯一标识符。
+
+#### 响应 DTO
+
+- **WorksetInfo**:
+  - `id` (字符串): 工作集的唯一标识符。
+  - `index` (整数): 工作集的索引。
+  - `name` (字符串): 工作集名称。
+  - `comic_count` (整数): 包含的漫画数量。
+  - `description` (字符串，可选): 工作集描述。
+  - `creator_id` (字符串): 创建者的唯一标识符。
+  - `creator_nickname` (字符串): 创建者的昵称。
+  - `created_at` (整数): 创建时间戳。
+  - `updated_at` (整数): 更新时间戳。
+
+---
+
+### 接口：检索工作集
+
+- **URL**: `/worksets`
+- **请求方法**: `GET`
+- **查询参数**:
+  - `limit` (整数，默认值: 10): 返回的最大记录数。
+  - `offset` (整数，默认值: 0): 返回记录的偏移量。
+
+#### 响应 DTO
+
+- **WorksetInfo**: 同上。
+
+---
+
+### 接口：创建工作集
+
+- **URL**: `/worksets`
+- **请求方法**: `POST`
+- **请求体 DTO**:
+  - **CreateWorksetArgs**:
+    - `name` (字符串): 工作集名称。
+    - `description` (字符串，可选): 工作集描述。
+
+#### 响应 DTO
+
+- **CreateWorksetReply**:
+  - `id` (字符串): 创建的工作集唯一标识符。
+
+---
+
+### 接口：根据ID更新工作集
+
+- **URL**: `/worksets/{workset_id}`
+- **请求方法**: `PUT`
+- **路径参数**:
+  - `workset_id` (字符串): 工作集的唯一标识符。
+- **请求体 DTO**:
+  - **UpdateWorksetArgs**:
+    - `id` (字符串): 工作集的唯一标识符。
+    - `description` (字符串，可选): 工作集描述。
+
+---
+
+### 接口：根据ID删除工作集
+
+- **URL**: `/worksets/{workset_id}`
+- **请求方法**: `DELETE`
+- **路径参数**:
+  - `workset_id` (字符串): 工作集的唯一标识符。
+
+---
