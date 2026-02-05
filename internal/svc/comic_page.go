@@ -27,9 +27,9 @@ type ComicPageSvc interface {
 		SvcErr,
 	)
 	RecreatePage(
-		opID string, 
-				args *model.RecreateComicPageArgs,
-		) (
+		opID string,
+		args *model.RecreateComicPageArgs,
+	) (
 		SvcRslt[model.CreateComicPageReply],
 		SvcErr,
 	)
@@ -247,12 +247,12 @@ func (cps *comicPageSvc) CreatePages(
 }
 
 func (cps *comicPageSvc) RecreatePage(
-		opID string, 
-		args *model.RecreateComicPageArgs,
-		) (
-		SvcRslt[model.CreateComicPageReply],
-		SvcErr,
-	) {
+	opID string,
+	args *model.RecreateComicPageArgs,
+) (
+	SvcRslt[model.CreateComicPageReply],
+	SvcErr,
+) {
 	// Get the comic ID of the page
 	page, err := cps.pageRepo.GetPageByID(nil, args.ID)
 	if err != nil {
@@ -261,7 +261,7 @@ func (cps *comicPageSvc) RecreatePage(
 	}
 	if page == nil {
 		zap.L().Warn("Page not found for recreation", zap.String("pageID", args.ID))
-		return  SvcRslt[model.CreateComicPageReply]{},NOT_FOUND
+		return SvcRslt[model.CreateComicPageReply]{}, NOT_FOUND
 	}
 	if page.ComicID == "" {
 		zap.L().Error("Page has empty comic ID", zap.String("pageID", args.ID))
@@ -272,11 +272,11 @@ func (cps *comicPageSvc) RecreatePage(
 	asgn, err := cps.comicAsgnRepo.GetAsgnsByUserAndComicID(nil, opID, page.ComicID)
 	if err != nil {
 		zap.L().Error("Failed to get comic assignment for user", zap.String("userID", opID), zap.String("comicID", page.ComicID), zap.Error(err))
-		return  SvcRslt[model.CreateComicPageReply]{},PERMISSION_DENIED
+		return SvcRslt[model.CreateComicPageReply]{}, PERMISSION_DENIED
 	}
 	if asgn == nil {
 		zap.L().Warn("User not assigned to comic for creating pages", zap.String("userID", opID), zap.String("comicID", page.ComicID))
-		return  SvcRslt[model.CreateComicPageReply]{},PERMISSION_DENIED
+		return SvcRslt[model.CreateComicPageReply]{}, PERMISSION_DENIED
 	}
 
 	// Mark page as not uploaded and clear OSS key
@@ -285,29 +285,29 @@ func (cps *comicPageSvc) RecreatePage(
 
 	patchPage := &po.PatchComicPage{
 		ID:       args.ID,
-		Uploaded: &falseVal	,
+		Uploaded: &falseVal,
 		OSSKey:   &emptyVal,
 	}
 
 	err = cps.pageRepo.UpdatePageByID(nil, patchPage)
 	if err != nil {
 		zap.L().Error("Failed to recreate page", zap.String("pageID", args.ID), zap.Error(err))
-		return  SvcRslt[model.CreateComicPageReply]{},DB_FAILURE
+		return SvcRslt[model.CreateComicPageReply]{}, DB_FAILURE
 	}
 
 	// Generate new presigned upload URL
 	ossKey := fmt.Sprintf("comic/%s/page_%d", page.ComicID, page.Index)
-	
+
 	uploadURL, err := cps.ossClient.PresignPut(ossKey)
 	if err != nil {
 		zap.L().Error("Failed to generate presigned upload URL for recreated page", zap.String("ossKey", ossKey), zap.Error(err))
-		return  SvcRslt[model.CreateComicPageReply]{},DB_FAILURE
+		return SvcRslt[model.CreateComicPageReply]{}, DB_FAILURE
 	}
 
 	return accept(
 		200,
 		model.CreateComicPageReply{
-			ID: args.ID,
+			ID:     args.ID,
 			OSSURL: uploadURL,
 		},
 	), NO_ERROR
@@ -342,7 +342,7 @@ func (cps *comicPageSvc) UpdatePageByID(opID string, args *model.PatchComicPageA
 			zap.L().Warn("Page not found for OSS key generation", zap.String("pageID", args.ID))
 			return NOT_FOUND
 		}
-		
+
 		// Dynamically generate OSS key: comic/{comic_id}/page_{index}.{ext}
 		key := fmt.Sprintf("comic/%s/page_%d.%s", page.ComicID, page.Index, *args.ImageExt)
 		ossKey = &key

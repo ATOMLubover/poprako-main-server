@@ -121,3 +121,7 @@ type UpdateComicArgs struct {
 	ReviewingCompleted    *bool `json:"reviewing_completed,omitempty"`
 	UploadingCompleted    *bool `json:"uploading_completed,omitempty"`
 }
+
+type ExportComicReply struct {
+	ExportURI string `json:"export_uri"`
+}

@@ -2,6 +2,8 @@
 
 **After any patch, there is necessity to run `funtioons.get_errors` MCP.**
 
+这是一个漫画在线协同翻校平台（的后端服务器），目前处于完全的初期开发阶段。
+
 ## Project Overview
 
 This project is a Go-based Trans-proofread website designed with a modular architecture. It includes components for API handling, service logic, data models, and repository patterns. The structure is optimized for scalability and maintainability, with clear separation of concerns.

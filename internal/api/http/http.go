@@ -58,9 +58,12 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 	{
 		comics.Get("", RetrieveComicBriefs(appState))
 		comics.Get("/{comic_id:string}", GetComicInfoByID(appState))
+		comics.Get("/{comic_id:string}/export", ExportComic(appState))
 		comics.Post("", CreateComic(appState))
 		comics.Patch("/{comic_id:string}", UpdateComicByID(appState))
 		comics.Delete("/{comic_id:string}", DeleteComicByID(appState))
+
+		app.HandleDir(appState.ComicSvc.ExportBaseURI(), appState.Cfg.ComicExportDir)
 	}
 
 	worksetComics := api.Party("/worksets/{workset_id:string}/comics")

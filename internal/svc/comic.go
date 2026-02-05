@@ -2,11 +2,16 @@ package svc
 
 import (
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"sort"
 	"time"
 
 	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/model/po"
 	"poprako-main-server/internal/repo"
+	comicPkg "poprako-main-server/internal/svc/comic"
 
 	"go.uber.org/zap"
 )
@@ -15,6 +20,9 @@ type ComicSvc interface {
 	GetComicInfoByID(comicID string) (SvcRslt[model.ComicInfo], SvcErr)
 	GetComicBriefsByWorksetID(worksetID string, offset, limit int) (SvcRslt[[]model.ComicBrief], SvcErr)
 	RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.ComicBrief], SvcErr)
+
+	ExportComic(comicID string) (SvcRslt[model.ExportComicReply], SvcErr)
+	ExportBaseURI() string
 
 	CreateComic(opID string, args model.CreateComicArgs) (SvcRslt[model.CreateComicReply], SvcErr)
 
@@ -27,9 +35,19 @@ type comicSvc struct {
 	repo          repo.ComicRepo
 	userRepo      repo.UserRepo
 	comicAsgnRepo repo.ComicAsgnRepo
+	comicPageRepo repo.ComicPageRepo
+	comicUnitRepo repo.ComicUnitRepo
+	exportDir     string
 }
 
-func NewComicSvc(r repo.ComicRepo, ur repo.UserRepo, car repo.ComicAsgnRepo) ComicSvc {
+func NewComicSvc(
+	r repo.ComicRepo,
+	ur repo.UserRepo,
+	car repo.ComicAsgnRepo,
+	cpr repo.ComicPageRepo,
+	cur repo.ComicUnitRepo,
+	exportDir string,
+) ComicSvc {
 	if r == nil {
 		panic("ComicRepo cannot be nil")
 	}
@@ -39,11 +57,23 @@ func NewComicSvc(r repo.ComicRepo, ur repo.UserRepo, car repo.ComicAsgnRepo) Com
 	if car == nil {
 		panic("ComicAsgnRepo cannot be nil")
 	}
+	if cpr == nil {
+		panic("ComicPageRepo cannot be nil")
+	}
+	if cur == nil {
+		panic("ComicUnitRepo cannot be nil")
+	}
+	if exportDir == "" {
+		panic("exportDir cannot be empty")
+	}
 
 	return &comicSvc{
 		repo:          r,
 		userRepo:      ur,
 		comicAsgnRepo: car,
+		comicPageRepo: cpr,
+		comicUnitRepo: cur,
+		exportDir:     exportDir,
 	}
 }
 
@@ -154,6 +184,105 @@ func (cs *comicSvc) RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.
 	}
 
 	return accept(200, lst), NO_ERROR
+}
+
+// ExportComic exports a comic to LabelPlus format.
+func (cs *comicSvc) ExportComic(comicID string) (SvcRslt[model.ExportComicReply], SvcErr) {
+	// Ensure export directory exists
+	if err := os.MkdirAll(cs.exportDir, 0o755); err != nil {
+		zap.L().Error("Failed to create export directory", zap.String("dir", cs.exportDir), zap.Error(err))
+		return SvcRslt[model.ExportComicReply]{}, DB_FAILURE
+	}
+
+	// Clean old exports if exceeding limit
+	if err := cs.cleanOldExports(); err != nil {
+		zap.L().Warn("Failed to clean old exports", zap.Error(err))
+		// Continue anyway - this is not critical
+	}
+
+	// Export the comic using the comic package
+	filePath, err := comicPkg.ExportLabelplusComic(
+		comicID,
+		cs.exportDir,
+		cs.repo,
+		cs.comicPageRepo,
+		cs.comicUnitRepo,
+	)
+	if err != nil {
+		if err == repo.REC_NOT_FOUND {
+			return SvcRslt[model.ExportComicReply]{}, NOT_FOUND
+		}
+		zap.L().Error("Failed to export comic", zap.String("comicID", comicID), zap.Error(err))
+		return SvcRslt[model.ExportComicReply]{}, DB_FAILURE
+	}
+
+	// Return relative URI
+	fileName := filepath.Base(filePath)
+	// FIXME: Sentitize fileName to prevent potential issues with special characters in URLs
+	exportURI := cs.ExportBaseURI() + url.PathEscape(fileName)
+
+	return accept(200, model.ExportComicReply{ExportURI: exportURI}), NO_ERROR
+}
+
+func (*comicSvc) ExportBaseURI() string {
+	return "/comics/export/"
+}
+
+// cleanOldExports removes oldest export files if count exceeds 30.
+func (cs *comicSvc) cleanOldExports() error {
+	const maxExports = 30
+
+	// List all files in export directory
+	files, err := os.ReadDir(cs.exportDir)
+	if err != nil {
+		return fmt.Errorf("failed to read export directory: %w", err)
+	}
+
+	// Filter out directories and collect file info
+	type fileInfo struct {
+		name    string
+		modTime time.Time
+	}
+
+	var fileList []fileInfo
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		info, err := f.Info()
+		if err != nil {
+			continue
+		}
+
+		fileList = append(fileList, fileInfo{
+			name:    f.Name(),
+			modTime: info.ModTime(),
+		})
+	}
+
+	// If under limit, nothing to do
+	if len(fileList) <= maxExports {
+		return nil
+	}
+
+	// Sort by modification time (oldest first)
+	sort.Slice(fileList, func(i, j int) bool {
+		return fileList[i].modTime.Before(fileList[j].modTime)
+	})
+
+	// Delete oldest files to bring count down to maxExports
+	toDelete := len(fileList) - maxExports
+	for i := 0; i < toDelete; i++ {
+		filePath := filepath.Join(cs.exportDir, fileList[i].name)
+		if err := os.Remove(filePath); err != nil {
+			zap.L().Warn("Failed to delete old export file",
+				zap.String("file", filePath),
+				zap.Error(err))
+		}
+	}
+
+	return nil
 }
 
 // CreateComic creates a new comic.

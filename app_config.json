@@ -5,5 +5,6 @@
   "check_update_min": "0.0.1",
   "host": "127.0.0.1",
   "port": 8080,
-  "jwt_exp_secs": 86400
+  "jwt_exp_secs": 86400,
+  "comic_export_dir": "./public/comics/"
 }

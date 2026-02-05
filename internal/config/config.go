@@ -18,6 +18,8 @@ type AppCfg struct {
 	Port uint16 `mapstructure:"port"`
 
 	JWTExpSecs int64 `mapstructure:"jwt_exp_secs"`
+
+	ComicExportDir string `mapstructure:"comic_export_dir"`
 }
 
 func LoadConfig(relPath string) AppCfg {

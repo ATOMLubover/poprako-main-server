@@ -78,6 +78,21 @@
 
 ---
 
+### 接口：导出漫画 (LabelPlus)
+
+- **URL**: `/api/v1/comics/{comic_id}/export`
+- **请求方法**: `GET`
+- **认证**: 该接口受认证保护（需通过 `AuthMiddleware`），调用导出需要有效的认证令牌。
+- **路径参数**:
+  - `comic_id` (字符串): 漫画的唯一标识符。
+
+#### 响应 DTO
+
+- **ExportComicReply**:
+  - `export_uri` (字符串): 导出文件的可访问相对 URI，形如 `/comics/export/{filename}`。
+
+---
+
 ### 接口：检索漫画简要信息
 
 - **URL**: `/comics`

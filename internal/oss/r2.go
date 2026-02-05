@@ -21,8 +21,8 @@ type r2Client struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
 
-	bucketName string
-	accountID  string
+	bucketName   string
+	accountID    string
 	customDomain string
 }
 
@@ -148,7 +148,7 @@ func (r2 *r2Client) PresignGet(ossKey string) (string, error) {
 
 	// Use bucket.accountID format to match the PUT URL format
 	encodedKey := url.PathEscape(ossKey)
-	
+
 	return fmt.Sprintf("https://%s.%s.r2.cloudflarestorage.com/%s", r2.bucketName, r2.accountID, encodedKey), nil
 }
 

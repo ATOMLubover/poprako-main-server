@@ -10,3 +10,6 @@ bin/
 
 # Mock.
 mocks/
+
+# Public assets.
+public/

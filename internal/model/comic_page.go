@@ -33,6 +33,6 @@ type RecreateComicPageArgs struct {
 type PatchComicPageArgs struct {
 	ID string `json:"id"`
 	// After upload, client should report the page as uploaded
-	ImageExt  *string `json:"image_ext,omitempty"`
-	Uploaded *bool `json:"uploaded,omitempty"`
+	ImageExt *string `json:"image_ext,omitempty"`
+	Uploaded *bool   `json:"uploaded,omitempty"`
 }

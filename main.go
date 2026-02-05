@@ -72,7 +72,7 @@ func initAppState(cfg config.AppCfg, ex repo.Executor) state.AppState {
 
 	// Create services.
 	userSvc := svc.NewUserSvc(userRepo, invRepo, jwtCodec)
-	comicSvc := svc.NewComicSvc(comicRepo, userRepo, comicAsgnRepo)
+	comicSvc := svc.NewComicSvc(comicRepo, userRepo, comicAsgnRepo, comicPageRepo, comicUnitRepo, cfg.ComicExportDir)
 	worksetSvc := svc.NewWorksetSvc(worksetRepo, userRepo)
 	comicUnitSvc := svc.NewComicUnitSvc(comicUnitRepo)
 	comicAsgnSvc := svc.NewComicAsgnSvc(comicAsgnRepo)
