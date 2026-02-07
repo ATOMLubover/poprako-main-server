@@ -1,7 +1,7 @@
 CREATE TABLE "comic_unit_tbl" (
     "id" TEXT PRIMARY KEY NOT NULL,
     
-    "page_id" TEXT NOT NULL REFERENCES "comic_page_tbl"("id"),
+    "page_id" TEXT NOT NULL REFERENCES "comic_page_tbl"("id") ON DELETE CASCADE,
     "index" INTEGER NOT NULL,
     
     "x_coordinate" DOUBLE PRECISION NOT NULL,

@@ -1,7 +1,7 @@
 CREATE TABLE "comic_page_tbl" (
     "id" TEXT PRIMARY KEY NOT NULL,
     
-    "comic_id" TEXT NOT NULL REFERENCES "comic_tbl"("id"),
+    "comic_id" TEXT NOT NULL REFERENCES "comic_tbl"("id") ON DELETE CASCADE,
     "index" INTEGER NOT NULL,
     
     "oss_key" TEXT,

@@ -64,6 +64,10 @@ const (
 	// DUPLICATE_INFO SvcErr = "Duplicate information"
 	// User already in team.
 	USER_EXISTING SvcErr = "User already in team"
+	// Invalid project file extension.
+	INVALID_PROJ_EXT SvcErr = "Invalid project file extension"
+	// Invalid project data.
+	INVALID_PROJ_DATA SvcErr = "Invalid project data"
 )
 
 // Get a API error code for the ServError.
@@ -102,6 +106,10 @@ func (e *SvcErr) Code() uint16 {
 	// case DUPLICATE_INFO:
 	// 	return 400
 	case USER_EXISTING:
+		return 400
+	case INVALID_PROJ_EXT:
+		return 400
+	case INVALID_PROJ_DATA:
 		return 400
 	default:
 		return 500
@@ -147,6 +155,10 @@ func (e *SvcErr) Msg() string {
 	// 	return "信息已被占用"
 	case USER_EXISTING:
 		return "成员已在团队中"
+	case INVALID_PROJ_EXT:
+		return "不支持的项目文件格式"
+	case INVALID_PROJ_DATA:
+		return "项目数据格式错误"
 	default:
 		return "服务器内部错误"
 	}

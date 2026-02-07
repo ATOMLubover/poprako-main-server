@@ -59,6 +59,7 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		comics.Get("", RetrieveComicBriefs(appState))
 		comics.Get("/{comic_id:string}", GetComicInfoByID(appState))
 		comics.Get("/{comic_id:string}/export", ExportComic(appState))
+		comics.Post("/{comic_id:string}/import", ImportComic(appState))
 		comics.Post("", CreateComic(appState))
 		comics.Patch("/{comic_id:string}", UpdateComicByID(appState))
 		comics.Delete("/{comic_id:string}", DeleteComicByID(appState))

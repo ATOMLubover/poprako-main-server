@@ -1,15 +1,20 @@
 package svc
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
 	"time"
 
 	"poprako-main-server/internal/model"
 	"poprako-main-server/internal/model/po"
+	"poprako-main-server/internal/oss"
 	"poprako-main-server/internal/repo"
 	comicPkg "poprako-main-server/internal/svc/comic"
 
@@ -23,6 +28,8 @@ type ComicSvc interface {
 
 	ExportComic(comicID string) (SvcRslt[model.ExportComicReply], SvcErr)
 	ExportBaseURI() string
+
+	ImportComic(opID string, comicID string, fileName string, reader io.Reader) SvcErr
 
 	CreateComic(opID string, args model.CreateComicArgs) (SvcRslt[model.CreateComicReply], SvcErr)
 
@@ -38,6 +45,7 @@ type comicSvc struct {
 	comicPageRepo repo.ComicPageRepo
 	comicUnitRepo repo.ComicUnitRepo
 	exportDir     string
+	ossClient     oss.OSSClient
 }
 
 func NewComicSvc(
@@ -47,6 +55,7 @@ func NewComicSvc(
 	cpr repo.ComicPageRepo,
 	cur repo.ComicUnitRepo,
 	exportDir string,
+	ossClient oss.OSSClient,
 ) ComicSvc {
 	if r == nil {
 		panic("ComicRepo cannot be nil")
@@ -66,6 +75,9 @@ func NewComicSvc(
 	if exportDir == "" {
 		panic("exportDir cannot be empty")
 	}
+	if ossClient == nil {
+		panic("ossClient cannot be nil")
+	}
 
 	return &comicSvc{
 		repo:          r,
@@ -74,6 +86,7 @@ func NewComicSvc(
 		comicPageRepo: cpr,
 		comicUnitRepo: cur,
 		exportDir:     exportDir,
+		ossClient:     ossClient,
 	}
 }
 
@@ -218,7 +231,6 @@ func (cs *comicSvc) ExportComic(comicID string) (SvcRslt[model.ExportComicReply]
 
 	// Return relative URI
 	fileName := filepath.Base(filePath)
-	// FIXME: Sentitize fileName to prevent potential issues with special characters in URLs
 	exportURI := cs.ExportBaseURI() + url.PathEscape(fileName)
 
 	return accept(200, model.ExportComicReply{ExportURI: exportURI}), NO_ERROR
@@ -226,6 +238,53 @@ func (cs *comicSvc) ExportComic(comicID string) (SvcRslt[model.ExportComicReply]
 
 func (*comicSvc) ExportBaseURI() string {
 	return "/comics/export/"
+}
+
+func (cs *comicSvc) ImportComic(
+	opID string,
+	comicID string,
+	fileName string,
+	reader io.Reader,
+) SvcErr {
+	// Check operation permission: opID must be assigned to the comic
+	asgn, err := cs.comicAsgnRepo.GetAsgnsByUserAndComicID(nil, opID, comicID)
+	if err != nil {
+		zap.L().Error("Failed to get comic assignment for import", zap.String("userID", opID), zap.String("comicID", comicID), zap.Error(err))
+		return PERMISSION_DENIED
+	}
+	if asgn == nil {
+		zap.L().Warn("User not assigned to comic for import", zap.String("userID", opID), zap.String("comicID", comicID))
+		return PERMISSION_DENIED
+	}
+
+	// Only allow import by users assigned as reviewer, translator or proofreader
+	if asgn.AssignedReviewerAt == nil && asgn.AssignedTranslatorAt == nil && asgn.AssignedProofreaderAt == nil {
+		zap.L().Warn("User does not have required role for importing comic", zap.String("userID", opID), zap.String("comicID", comicID))
+		return PERMISSION_DENIED
+	}
+
+	// Check file extension
+	ext := strings.ToLower(filepath.Ext(fileName))
+
+	switch ext {
+	case ".txt":
+		// Import LabelPlus format
+		if err := comicPkg.ImportLabelplusComic(reader, comicID, cs.comicPageRepo, cs.comicUnitRepo); err != nil {
+			zap.L().Error("Failed to import LabelPlus comic",
+				zap.String("comicID", comicID),
+				zap.String("fileName", fileName),
+				zap.Error(err))
+			return INVALID_PROJ_DATA
+		}
+		return NO_ERROR
+
+	default:
+		zap.L().Warn("Unsupported project file extension",
+			zap.String("comicID", comicID),
+			zap.String("fileName", fileName),
+			zap.String("extension", ext))
+		return INVALID_PROJ_EXT
+	}
 }
 
 // cleanOldExports removes oldest export files if count exceeds 30.
@@ -499,6 +558,71 @@ func (cs *comicSvc) createPreAssignments(tx repo.Executor, comicID string, preAs
 }
 
 func (cs *comicSvc) DeleteComicByID(comicID string) SvcErr {
+	// First, get all pages for this comic
+	pages, err := cs.comicPageRepo.GetPagesByComicID(nil, comicID)
+	if err != nil {
+		zap.L().Error("Failed to get pages for comic deletion", zap.String("comicID", comicID), zap.Error(err))
+		return DB_FAILURE
+	}
+
+	// Delete all pages concurrently
+	// For each page: delete OSS object first, then delete page from DB
+	// OSS deletion failure must abort the entire operation
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	ctx := context.Background()
+
+	for _, page := range pages {
+		wg.Add(1)
+		go func(p po.BasicComicPage) {
+			defer wg.Done()
+
+			// Delete OSS object first (if exists)
+			if p.OSSKey != "" {
+				if err := cs.ossClient.DeleteObject(ctx, p.OSSKey); err != nil {
+					zap.L().Error("Failed to delete OSS object for page",
+						zap.String("comicID", comicID),
+						zap.String("pageID", p.ID),
+						zap.String("ossKey", p.OSSKey),
+						zap.Error(err))
+					mu.Lock()
+					if firstErr == nil {
+						firstErr = err
+					}
+					mu.Unlock()
+					return
+				}
+			}
+
+			// Then delete page from database
+			// CASCADE will automatically delete units
+			if err := cs.comicPageRepo.DeletePageByID(nil, p.ID); err != nil {
+				zap.L().Error("Failed to delete page from DB",
+					zap.String("comicID", comicID),
+					zap.String("pageID", p.ID),
+					zap.Error(err))
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+				return
+			}
+		}(page)
+	}
+
+	// Wait for all page deletions to complete
+	wg.Wait()
+
+	// If any page deletion failed, abort
+	if firstErr != nil {
+		zap.L().Error("Failed to delete pages for comic", zap.String("comicID", comicID), zap.Error(firstErr))
+		return DB_FAILURE
+	}
+
+	// All pages deleted successfully, now delete the comic
 	if err := cs.repo.DeleteComicByID(nil, comicID); err != nil {
 		if err == repo.REC_NOT_FOUND {
 			zap.L().Warn("Comic not found for deletion", zap.String("comicID", comicID))

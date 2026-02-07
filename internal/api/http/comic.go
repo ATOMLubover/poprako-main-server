@@ -160,3 +160,37 @@ func ExportComic(appState *state.AppState) iris.Handler {
 		accept(ctx, res)
 	}
 }
+
+func ImportComic(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		// comic_id is required as a path parameter
+		comicID := ctx.Params().Get("comic_id")
+		if comicID == "" {
+			reject(ctx, iris.StatusBadRequest, "缺少 comic_id 路径参数")
+			return
+		}
+
+		// Read file from form-data with field name `translation_data`
+		file, fh, err := ctx.FormFile("translation_data")
+		if err != nil {
+			reject(ctx, iris.StatusBadRequest, "缺少 translation_data 文件")
+			return
+		}
+		defer file.Close()
+
+		opID := ctx.Values().GetString("user_id")
+		if opID == "" {
+			reject(ctx, iris.StatusUnauthorized, "未认证用户")
+			return
+		}
+
+		// Call service with file reader
+		svcErr := appState.ComicSvc.ImportComic(opID, comicID, fh.Filename, file)
+		if svcErr != svc.NO_ERROR {
+			reject(ctx, svcErr.Code(), svcErr.Msg())
+			return
+		}
+
+		ctx.StatusCode(iris.StatusNoContent)
+	}
+}

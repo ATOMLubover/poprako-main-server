@@ -44,10 +44,10 @@ func ExportLabelplusComic(
 	safeTitle := truncateRunes(sanitizeFilename(comic.Title), 60)
 
 	fileName := fmt.Sprintf("【%s】%s-%s.labelplus.txt", safeAuthor, safeTitle, now.Format("20060102150405"))
-	
+
 	// Ensure single filename component stays within filesystem limits (use 255 bytes as safe limit)
 	const maxComponentBytes = 255
-	
+
 	for len([]byte(fileName)) > maxComponentBytes {
 		if len([]rune(safeTitle)) > 1 {
 			safeTitle = shortenByOneRune(safeTitle)
@@ -96,7 +96,7 @@ func writeLabelPlusPage(w io.Writer, page po.BasicComicPage, unitRepo repo.Comic
 	// Write page header: \n\n>>>>>>>>[filename]<<<<<<<<\n
 	imgExt := filepath.Ext(page.OSSKey)
 	imgName := fmt.Sprintf("page_%d%s", page.Index, imgExt)
-	
+
 	if _, err := fmt.Fprintf(w, "\n\n>>>>>>>>[%s]<<<<<<<<\n", imgName); err != nil {
 		return err
 	}

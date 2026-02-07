@@ -1,8 +1,8 @@
 CREATE TABLE "comic_assignment_tbl" (
     "id" TEXT PRIMARY KEY NOT NULL,
 
-    "comic_id" TEXT NOT NULL REFERENCES "comic_tbl"("id"),
-    "user_id" TEXT NOT NULL REFERENCES "user_tbl"("id"),
+    "comic_id" TEXT NOT NULL REFERENCES "comic_tbl"("id") ON DELETE CASCADE,
+    "user_id" TEXT NOT NULL REFERENCES "user_tbl"("id") ON DELETE CASCADE,
 
     "assigned_translator_at" TIMESTAMPTZ,
     "assigned_proofreader_at" TIMESTAMPTZ,
