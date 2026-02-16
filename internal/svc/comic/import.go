@@ -30,7 +30,11 @@ type parsedUnit struct {
 	translatorComment  *string
 	proofreaderComment *string
 }
-
+// ImportOptions defines options for importing a comic.
+type ImportOptions struct {
+	IsProofreader bool
+	UserID        string
+}
 var (
 	// Regex patterns for parsing LabelPlus format
 	pageHeaderRegex = regexp.MustCompile(`^>>>>>>>>\[.+\]<<<<<<<<$`)
@@ -46,6 +50,7 @@ func ImportLabelplusComic(
 	comicID string,
 	pageRepo repo.ComicPageRepo,
 	unitRepo repo.ComicUnitRepo,
+	opts ImportOptions,
 ) error {
 	// 1. Parse the LabelPlus file
 	parsedPages, err := parseLabelPlusFile(file)
@@ -94,6 +99,21 @@ func ImportLabelplusComic(
 			return fmt.Errorf("failed to get existing units for page %s: %w", dbPage.ID, err)
 		}
 
+		// Check if translator can overwrite this page
+		if !opts.IsProofreader {
+			hasProvedUnit := false
+			for _, u := range existingUnits {
+				if u.Proved {
+					hasProvedUnit = true
+					break
+				}
+			}
+			if hasProvedUnit {
+				// Skip this page - translator cannot overwrite proofread content
+				continue
+			}
+		}
+
 		// Delete all existing units
 		if len(existingUnits) > 0 {
 			unitIDs := make([]string, len(existingUnits))
@@ -116,6 +136,25 @@ func ImportLabelplusComic(
 				return fmt.Errorf("failed to generate UUID for unit: %w", err)
 			}
 
+			// Map fields based on importer role
+			var translatedText *string
+			var provedText *string
+			var translatorID *string
+			var proofreaderID *string
+			var proved bool
+
+			if opts.IsProofreader {
+				// Proofreader: write to proved layer
+				provedText = stringPtrOrNil(parsedUnit.text)
+				proved = true
+				proofreaderID = &opts.UserID
+			} else {
+				// Translator: write to translation layer
+				translatedText = stringPtrOrNil(parsedUnit.text)
+				proved = false
+				translatorID = &opts.UserID
+			}
+
 			newUnits[j] = po.NewComicUnit{
 				ID:                 unitID.String(),
 				PageID:             dbPage.ID,
@@ -123,14 +162,14 @@ func ImportLabelplusComic(
 				XCoordinate:        parsedUnit.x,
 				YCoordinate:        parsedUnit.y,
 				IsInBox:            parsedUnit.isInBox,
-				TranslatedText:     stringPtrOrNil(parsedUnit.text),
+				TranslatedText:     translatedText,
 				TranslatorComment:  parsedUnit.translatorComment,
-				ProvedText:         nil, // Clear proved text on import
-				Proved:             false,
+				ProvedText:         provedText,
+				Proved:             proved,
 				ProofreaderComment: parsedUnit.proofreaderComment,
-				TranslatorID:       nil,
-				ProofreaderID:      nil,
-				CreatorID:          nil,
+				TranslatorID:       translatorID,
+				ProofreaderID:      proofreaderID,
+				CreatorID:          &opts.UserID,
 			}
 		}
 

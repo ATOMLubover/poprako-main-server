@@ -13,3 +13,7 @@ mocks/
 
 # Public assets.
 public/
+
+# Executable files.
+*.exe
+poprako-main-server*

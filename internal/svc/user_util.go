@@ -95,6 +95,7 @@ func (us *userSvc) verifyInvCode(code string, qq string) (*model.InvitationInfo,
 	}
 
 	return &model.InvitationInfo{
+		ID:                invitation.ID,
 		InvitorID:         invitation.InvitorID,
 		InviteeQQ:         invitation.InviteeQQ,
 		Pending:           invitation.Pending,

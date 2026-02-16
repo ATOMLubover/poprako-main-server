@@ -59,6 +59,8 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		comics.Get("", RetrieveComicBriefs(appState))
 		comics.Get("/{comic_id:string}", GetComicInfoByID(appState))
 		comics.Get("/{comic_id:string}/export", ExportComic(appState))
+		comics.Get("/{comic_id:string}/cover", GetCoverByComicID(appState))
+		comics.Get("/{comic_id:string}/pages", GetPagesByComicID(appState))
 		comics.Post("/{comic_id:string}/import", ImportComic(appState))
 		comics.Post("", CreateComic(appState))
 		comics.Patch("/{comic_id:string}", UpdateComicByID(appState))
@@ -79,11 +81,6 @@ func routeApp(app *iris.Application, appState *state.AppState) {
 		pages.Post("/recreate", RecreatePage(appState))
 		pages.Delete("/{page_id:string}", DeletePageByID(appState))
 		pages.Patch("/{page_id:string}", UpdatePageByID(appState))
-	}
-
-	comicPages := api.Party("/comics/{comic_id:string}/pages")
-	{
-		comicPages.Get("", GetPagesByComicID(appState))
 	}
 
 	units := api.Party("/pages/{page_id:string}/units")

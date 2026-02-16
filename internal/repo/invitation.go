@@ -7,6 +7,7 @@ type InvitationRepo interface {
 	GetInvitationByQQ(ex Executor, inviteeQQ string) (*po.BasicInvitation, error)
 
 	CreateInvitations(ex Executor, newInvitation *po.NewInvitation) error
+	MarkInvitationAsUsed(ex Executor, invitationID string) error
 }
 
 type invitationRepo struct {
@@ -81,4 +82,17 @@ func (ir *invitationRepo) CreateInvitations(
 	ex = ir.withTrx(ex)
 
 	return ex.Create(newInvitation).Error
+}
+
+func (ir *invitationRepo) MarkInvitationAsUsed(
+	ex Executor,
+	invitationID string,
+) error {
+	ex = ir.withTrx(ex)
+
+	return ex.
+		Model(&po.BasicInvitation{}).
+		Where("id = ?", invitationID).
+		Update("pending", false).
+		Error
 }

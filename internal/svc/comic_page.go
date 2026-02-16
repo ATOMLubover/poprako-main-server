@@ -17,6 +17,7 @@ import (
 
 type ComicPageSvc interface {
 	GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo], SvcErr)
+	GetCoverByComicID(comicID string) (SvcRslt[model.ComicPageInfo], SvcErr)
 	GetPagesByComicID(comicID string) (SvcRslt[[]model.ComicPageInfo], SvcErr)
 
 	CreatePages(
@@ -84,6 +85,51 @@ func (cps *comicPageSvc) GetPageByID(pageID string) (SvcRslt[model.ComicPageInfo
 		ossURL, err = cps.ossClient.PresignGet(page.OSSKey)
 		if err != nil {
 			zap.L().Error("Failed to generate presigned URL for page", zap.String("pageID", pageID), zap.String("ossKey", page.OSSKey), zap.Error(err))
+			return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+		}
+	}
+
+	pageInfo := model.ComicPageInfo{
+		ID:                  page.ID,
+		ComicID:             page.ComicID,
+		Index:               page.Index,
+		OSSURL:              ossURL,
+		Uploaded:            page.Uploaded,
+		InboxUnitCount:      counts.Inbox,
+		OutboxUnitCount:     counts.Outbox,
+		TranslatedUnitCount: counts.Translated,
+		ProvedUnitCount:     counts.Proved,
+	}
+
+	return accept(200, pageInfo), NO_ERROR
+}
+
+func (cps *comicPageSvc) GetCoverByComicID(comicID string) (SvcRslt[model.ComicPageInfo], SvcErr) {
+	page, err := cps.pageRepo.GetCoverByComicID(nil, comicID)
+	if err != nil {
+		if err == repo.REC_NOT_FOUND {
+			return SvcRslt[model.ComicPageInfo]{}, NOT_FOUND
+		}
+
+		zap.L().Error("Failed to get cover by comic ID", zap.String("comicID", comicID), zap.Error(err))
+
+		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+	}
+
+	// Get unit counts for the page
+	counts, err := cps.unitRepo.GetUnitCountsByPageID(nil, page.ID)
+	if err != nil {
+		zap.L().Error("Failed to get unit counts for cover page", zap.String("pageID", page.ID), zap.Error(err))
+		return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
+	}
+
+	// Only generate OSS URL if page is uploaded and OSSKey is present in DB
+	var ossURL string
+	if page.Uploaded && page.OSSKey != "" {
+		var perr error
+		ossURL, perr = cps.ossClient.PresignGet(page.OSSKey)
+		if perr != nil {
+			zap.L().Error("Failed to generate presigned URL for cover page", zap.String("pageID", page.ID), zap.String("ossKey", page.OSSKey), zap.Error(perr))
 			return SvcRslt[model.ComicPageInfo]{}, DB_FAILURE
 		}
 	}

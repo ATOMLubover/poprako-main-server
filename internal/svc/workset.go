@@ -55,6 +55,7 @@ func (ws *worksetSvc) GetWorksetByID(worksetID string) (SvcRslt[model.WorksetInf
 		CreatedAt:       detail.CreatedAt.Unix(),
 		UpdatedAt:       detail.UpdatedAt.Unix(),
 	}
+
 	return accept(200, info), NO_ERROR
 }
 
@@ -65,7 +66,7 @@ func (ws *worksetSvc) RetrieveWorksets(limit, offset int) (SvcRslt[[]model.Works
 		return SvcRslt[[]model.WorksetInfo]{}, DB_FAILURE
 	}
 
-	var infos []model.WorksetInfo
+	infos := make([]model.WorksetInfo, 0, len(details))
 
 	for _, d := range details {
 		infos = append(infos, model.WorksetInfo{

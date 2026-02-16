@@ -346,6 +346,12 @@ func (us *userSvc) registerUser(args model.LoginArgs) (SvcRslt[model.LoginReply]
 		return SvcRslt[model.LoginReply]{}, DB_FAILURE
 	}
 
+	// Mark the invitation as used (set pending to false)
+	if err := us.invRepo.MarkInvitationAsUsed(nil, invitation.ID); err != nil {
+		zap.L().Error("Failed to mark invitation as used after user creation", zap.String("invitationID", invitation.ID), zap.Error(err))
+		// Continue anyway, as the user was created successfully
+	}
+
 	// Creation succeeded, generate JWT token for the new user.
 	// ID is automatically populated after creation.
 	token, err := us.genJWT(newUser.ID)

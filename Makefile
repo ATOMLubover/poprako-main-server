@@ -72,14 +72,11 @@ test-all:
 
 	@echo Tests completed.
 
-.PHONY: build
-build:
-	@echo Building project...
-
-	go build -o bin/project main.go
-
-	@echo Project built.
 
 .PHNOY: run
 run:
 	go run main.go
+
+.PHONY: build
+build:
+	$env:GOOS="linux"; $env:GOARCH="amd64"; go build -o poprako-main-server main.go

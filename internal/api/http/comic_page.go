@@ -44,6 +44,24 @@ func GetPagesByComicID(appState *state.AppState) iris.Handler {
 	}
 }
 
+func GetCoverByComicID(appState *state.AppState) iris.Handler {
+	return func(ctx iris.Context) {
+		comicID := ctx.Params().Get("comic_id")
+		if comicID == "" {
+			reject(ctx, iris.StatusBadRequest, "缺少 comic_id 路径参数")
+			return
+		}
+
+		res, err := appState.ComicPageSvc.GetCoverByComicID(comicID)
+		if err != svc.NO_ERROR {
+			reject(ctx, err.Code(), err.Msg())
+			return
+		}
+
+		accept(ctx, res)
+	}
+}
+
 func CreatePages(appState *state.AppState) iris.Handler {
 	return func(ctx iris.Context) {
 		var pages []model.CreateComicPageArgs

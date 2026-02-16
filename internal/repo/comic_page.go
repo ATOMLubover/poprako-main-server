@@ -13,6 +13,7 @@ type ComicPageRepo interface {
 	Repo
 
 	GetPageByID(ex Executor, pageID string) (*po.BasicComicPage, error)
+	GetCoverByComicID(ex Executor, comicID string) (*po.BasicComicPage, error)
 	GetPagesByComicID(ex Executor, comicID string) ([]po.BasicComicPage, error)
 
 	CreatePages(newPages []po.NewComicPage) error
@@ -96,6 +97,22 @@ func (cpr *comicPageRepo) GetPagesByComicID(ex Executor, comicID string) ([]po.B
 	}
 
 	return lst, nil
+}
+
+func (cpr *comicPageRepo) GetCoverByComicID(ex Executor, comicID string) (*po.BasicComicPage, error) {
+	ex = cpr.withTrx(ex)
+
+	p := &po.BasicComicPage{}
+
+	if err := ex.
+		Where("comic_id = ?", comicID).
+		Order("index ASC").
+		First(p).
+		Error; err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPage) error {

@@ -263,13 +263,21 @@ func (cs *comicSvc) ImportComic(
 		return PERMISSION_DENIED
 	}
 
+	// Determine import role: Proofreader has priority over Translator
+	isProofreader := asgn.AssignedProofreaderAt != nil
+
+	importOpts := comicPkg.ImportOptions{
+		IsProofreader: isProofreader,
+		UserID:        opID,
+	}
+
 	// Check file extension
 	ext := strings.ToLower(filepath.Ext(fileName))
 
 	switch ext {
 	case ".txt":
 		// Import LabelPlus format
-		if err := comicPkg.ImportLabelplusComic(reader, comicID, cs.comicPageRepo, cs.comicUnitRepo); err != nil {
+		if err := comicPkg.ImportLabelplusComic(reader, comicID, cs.comicPageRepo, cs.comicUnitRepo, importOpts); err != nil {
 			zap.L().Error("Failed to import LabelPlus comic",
 				zap.String("comicID", comicID),
 				zap.String("fileName", fileName),

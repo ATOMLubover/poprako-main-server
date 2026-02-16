@@ -24,16 +24,20 @@ type ComicAsgnSvc interface {
 }
 
 type comicAsgnSvc struct {
-	repo repo.ComicAsgnRepo
+	repo     repo.ComicAsgnRepo
+	userRepo repo.UserRepo
 }
 
-// NewComicAsgnSvc creates a new ComicAsgnSvc. r must not be nil.
-func NewComicAsgnSvc(r repo.ComicAsgnRepo) ComicAsgnSvc {
+// NewComicAsgnSvc creates a new ComicAsgnSvc. r and userRepo must not be nil.
+func NewComicAsgnSvc(r repo.ComicAsgnRepo, userRepo repo.UserRepo) ComicAsgnSvc {
 	if r == nil {
 		panic("ComicAsgnRepo cannot be nil")
 	}
+	if userRepo == nil {
+		panic("UserRepo cannot be nil")
+	}
 
-	return &comicAsgnSvc{repo: r}
+	return &comicAsgnSvc{repo: r, userRepo: userRepo}
 }
 
 // GetAsgnByID retrieves a comic assignment by ID.
@@ -82,6 +86,45 @@ func (cas *comicAsgnSvc) GetAsgnsByUserID(userID string, offset, limit int) (Svc
 
 // CreateAsgn creates a new comic assignment.
 func (cas *comicAsgnSvc) CreateAsgn(args model.CreateComicAsgnArgs) (SvcRslt[string], SvcErr) {
+	// Validate user qualifications for requested roles
+	user, err := cas.userRepo.GetUserByID(nil, args.AssigneeID)
+	if err != nil {
+		zap.L().Error("Failed to get user info for assignment", zap.String("userID", args.AssigneeID), zap.Error(err))
+		return SvcRslt[string]{}, DB_FAILURE
+	}
+
+	// Check if user has required qualifications for requested roles
+	if args.IsTranslator != nil && *args.IsTranslator {
+		if user.AssignedTranslatorAt == nil {
+			zap.L().Warn("User does not have translator qualification", zap.String("userID", args.AssigneeID))
+			return SvcRslt[string]{}, PERMISSION_DENIED
+		}
+	}
+	if args.IsProofreader != nil && *args.IsProofreader {
+		if user.AssignedProofreaderAt == nil {
+			zap.L().Warn("User does not have proofreader qualification", zap.String("userID", args.AssigneeID))
+			return SvcRslt[string]{}, PERMISSION_DENIED
+		}
+	}
+	if args.IsTypesetter != nil && *args.IsTypesetter {
+		if user.AssignedTypesetterAt == nil {
+			zap.L().Warn("User does not have typesetter qualification", zap.String("userID", args.AssigneeID))
+			return SvcRslt[string]{}, PERMISSION_DENIED
+		}
+	}
+	if args.IsRedrawer != nil && *args.IsRedrawer {
+		if user.AssignedRedrawerAt == nil {
+			zap.L().Warn("User does not have redrawer qualification", zap.String("userID", args.AssigneeID))
+			return SvcRslt[string]{}, PERMISSION_DENIED
+		}
+	}
+	if args.IsReviewer != nil && *args.IsReviewer {
+		if user.AssignedReviewerAt == nil {
+			zap.L().Warn("User does not have reviewer qualification", zap.String("userID", args.AssigneeID))
+			return SvcRslt[string]{}, PERMISSION_DENIED
+		}
+	}
+
 	// Generate ID for the assignment
 	id, err := genUUID()
 	if err != nil {
@@ -97,6 +140,34 @@ func (cas *comicAsgnSvc) CreateAsgn(args model.CreateComicAsgnArgs) (SvcRslt[str
 
 	if err := cas.repo.CreateAsgn(nil, newAssign); err != nil {
 		zap.L().Error("Failed to create assignment", zap.Error(err))
+		return SvcRslt[string]{}, DB_FAILURE
+	}
+
+	// Set role timestamps based on requested roles
+	now := time.Now()
+	patchAssign := po.PatchComicAsgn{
+		ID: id,
+	}
+
+	if args.IsTranslator != nil && *args.IsTranslator {
+		patchAssign.AssignedTranslatorAt = &now
+	}
+	if args.IsProofreader != nil && *args.IsProofreader {
+		patchAssign.AssignedProofreaderAt = &now
+	}
+	if args.IsTypesetter != nil && *args.IsTypesetter {
+		patchAssign.AssignedTypesetterAt = &now
+	}
+	if args.IsRedrawer != nil && *args.IsRedrawer {
+		patchAssign.AssignedRedrawerAt = &now
+	}
+	if args.IsReviewer != nil && *args.IsReviewer {
+		patchAssign.AssignedReviewerAt = &now
+	}
+
+	// Update assignment with role timestamps
+	if err := cas.repo.UpdateAsgnByID(nil, &patchAssign); err != nil {
+		zap.L().Error("Failed to set assignment roles", zap.Error(err))
 		return SvcRslt[string]{}, DB_FAILURE
 	}
 
