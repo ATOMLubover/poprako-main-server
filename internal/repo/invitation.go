@@ -3,26 +3,26 @@ package repo
 import "poprako-main-server/internal/model/po"
 
 type InvitationRepo interface {
-	RetrieveInvitations(ex Executor) ([]po.BasicInvitation, error)
-	GetInvitationByQQ(ex Executor, inviteeQQ string) (*po.BasicInvitation, error)
+	RetrieveInvitations(ex Exct) ([]po.BasicInvitation, error)
+	GetInvitationByQQ(ex Exct, inviteeQQ string) (*po.BasicInvitation, error)
 
-	CreateInvitations(ex Executor, newInvitation *po.NewInvitation) error
-	MarkInvitationAsUsed(ex Executor, invitationID string) error
+	CreateInvitations(ex Exct, newInvitation *po.NewInvitation) error
+	MarkInvitationAsUsed(ex Exct, invitationID string) error
 }
 
 type invitationRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewInvitationRepo(ex Executor) InvitationRepo {
+func NewInvitationRepo(ex Exct) InvitationRepo {
 	return &invitationRepo{
 		ex: ex,
 	}
 }
 
-func (ir *invitationRepo) Exec() Executor { return ir.ex }
+func (ir *invitationRepo) Exec() Exct { return ir.ex }
 
-func (ir *invitationRepo) withTrx(tx Executor) Executor {
+func (ir *invitationRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -31,7 +31,7 @@ func (ir *invitationRepo) withTrx(tx Executor) Executor {
 }
 
 func (ir *invitationRepo) RetrieveInvitations(
-	ex Executor,
+	ex Exct,
 ) (
 	[]po.BasicInvitation,
 	error,
@@ -42,6 +42,7 @@ func (ir *invitationRepo) RetrieveInvitations(
 
 	if err := ex.
 		Where("pending = ?", true).
+		Order("created_at DESC").
 		Find(&invitations).
 		Error; err != nil {
 		return invitations, err
@@ -51,7 +52,7 @@ func (ir *invitationRepo) RetrieveInvitations(
 }
 
 func (ir *invitationRepo) GetInvitationByQQ(
-	ex Executor,
+	ex Exct,
 	inviteeQQ string,
 ) (
 	*po.BasicInvitation,
@@ -76,7 +77,7 @@ func (ir *invitationRepo) GetInvitationByQQ(
 }
 
 func (ir *invitationRepo) CreateInvitations(
-	ex Executor,
+	ex Exct,
 	newInvitation *po.NewInvitation,
 ) error {
 	ex = ir.withTrx(ex)
@@ -85,7 +86,7 @@ func (ir *invitationRepo) CreateInvitations(
 }
 
 func (ir *invitationRepo) MarkInvitationAsUsed(
-	ex Executor,
+	ex Exct,
 	invitationID string,
 ) error {
 	ex = ir.withTrx(ex)

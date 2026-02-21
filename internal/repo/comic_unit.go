@@ -10,30 +10,30 @@ import (
 type ComicUnitRepo interface {
 	Repo
 
-	GetUnitsByPageID(ex Executor, pageID string) ([]po.BasicComicUnit, error)
+	GetUnitsByPageID(ex Exct, pageID string) ([]po.BasicComicUnit, error)
 
-	GetUnitCountsByPageID(ex Executor, pageID string) (UnitCounts, error)
+	GetUnitCountsByPageID(ex Exct, pageID string) (po.UnitCounts, error)
 
-	GetUnitCountsByPageIDs(ex Executor, pageIDs []string) (map[string]UnitCounts, error)
+	GetUnitCountsByPageIDs(ex Exct, pageIDs []string) (map[string]po.UnitCounts, error)
 
-	CreateUnits(ex Executor, newUnits []po.NewComicUnit) error
+	CreateUnits(ex Exct, newUnits []po.NewComicUnit) error
 
-	UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchComicUnit) error
+	UpdateUnitsByIDs(ex Exct, patchUnits []po.PatchComicUnit) error
 
-	DeleteUnitByIDs(ex Executor, unitIDs []string) error
+	DeleteUnitByIDs(ex Exct, unitIDs []string) error
 }
 
 type comicUnitRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewComicUnitRepo(ex Executor) ComicUnitRepo {
+func NewComicUnitRepo(ex Exct) ComicUnitRepo {
 	return &comicUnitRepo{ex: ex}
 }
 
-func (cur *comicUnitRepo) Exec() Executor { return cur.ex }
+func (cur *comicUnitRepo) Exct() Exct { return cur.ex }
 
-func (cur *comicUnitRepo) withTrx(tx Executor) Executor {
+func (cur *comicUnitRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -41,7 +41,7 @@ func (cur *comicUnitRepo) withTrx(tx Executor) Executor {
 	return cur.ex
 }
 
-func (cur *comicUnitRepo) CreateUnits(ex Executor, newUnits []po.NewComicUnit) error {
+func (cur *comicUnitRepo) CreateUnits(ex Exct, newUnits []po.NewComicUnit) error {
 	if len(newUnits) == 0 {
 		return nil
 	}
@@ -51,7 +51,7 @@ func (cur *comicUnitRepo) CreateUnits(ex Executor, newUnits []po.NewComicUnit) e
 	return ex.Create(newUnits).Error
 }
 
-func (cur *comicUnitRepo) GetUnitsByPageID(ex Executor, pageID string) ([]po.BasicComicUnit, error) {
+func (cur *comicUnitRepo) GetUnitsByPageID(ex Exct, pageID string) ([]po.BasicComicUnit, error) {
 	ex = cur.withTrx(ex)
 
 	var lst []po.BasicComicUnit
@@ -66,7 +66,7 @@ func (cur *comicUnitRepo) GetUnitsByPageID(ex Executor, pageID string) ([]po.Bas
 	return lst, nil
 }
 
-func (cur *comicUnitRepo) UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchComicUnit) error {
+func (cur *comicUnitRepo) UpdateUnitsByIDs(ex Exct, patchUnits []po.PatchComicUnit) error {
 	if len(patchUnits) == 0 {
 		return nil
 	}
@@ -133,7 +133,7 @@ func (cur *comicUnitRepo) UpdateUnitsByIDs(ex Executor, patchUnits []po.PatchCom
 	return nil
 }
 
-func (cur *comicUnitRepo) DeleteUnitByIDs(ex Executor, unitIDs []string) error {
+func (cur *comicUnitRepo) DeleteUnitByIDs(ex Exct, unitIDs []string) error {
 	if len(unitIDs) == 0 {
 		return nil
 	}
@@ -143,7 +143,7 @@ func (cur *comicUnitRepo) DeleteUnitByIDs(ex Executor, unitIDs []string) error {
 	return ex.Where("id IN ?", unitIDs).Delete(&po.BasicComicUnit{}).Error
 }
 
-func (cur *comicUnitRepo) GetUnitCountsByPageID(ex Executor, pageID string) (UnitCounts, error) {
+func (cur *comicUnitRepo) GetUnitCountsByPageID(ex Exct, pageID string) (po.UnitCounts, error) {
 	ex = cur.withTrx(ex)
 
 	var result struct {
@@ -164,10 +164,10 @@ func (cur *comicUnitRepo) GetUnitCountsByPageID(ex Executor, pageID string) (Uni
 		Scan(&result).
 		Error
 	if err != nil {
-		return UnitCounts{}, fmt.Errorf("Failed to get unit counts by page ID: %w", err)
+		return po.UnitCounts{}, fmt.Errorf("Failed to get unit counts by page ID: %w", err)
 	}
 
-	return UnitCounts{
+	return po.UnitCounts{
 		Inbox:      result.Inbox,
 		Outbox:     result.Outbox,
 		Translated: result.Translated,
@@ -175,9 +175,9 @@ func (cur *comicUnitRepo) GetUnitCountsByPageID(ex Executor, pageID string) (Uni
 	}, nil
 }
 
-func (cur *comicUnitRepo) GetUnitCountsByPageIDs(ex Executor, pageIDs []string) (map[string]UnitCounts, error) {
+func (cur *comicUnitRepo) GetUnitCountsByPageIDs(ex Exct, pageIDs []string) (map[string]po.UnitCounts, error) {
 	if len(pageIDs) == 0 {
-		return make(map[string]UnitCounts), nil
+		return make(map[string]po.UnitCounts), nil
 	}
 
 	ex = cur.withTrx(ex)
@@ -206,9 +206,9 @@ func (cur *comicUnitRepo) GetUnitCountsByPageIDs(ex Executor, pageIDs []string) 
 		return nil, fmt.Errorf("Failed to get unit counts by page IDs: %w", err)
 	}
 
-	countsMap := make(map[string]UnitCounts, len(results))
+	countsMap := make(map[string]po.UnitCounts, len(results))
 	for _, r := range results {
-		countsMap[r.PageID] = UnitCounts{
+		countsMap[r.PageID] = po.UnitCounts{
 			Inbox:      r.Inbox,
 			Outbox:     r.Outbox,
 			Translated: r.Translated,

@@ -14,33 +14,33 @@ import (
 type UserRepo interface {
 	Repo
 
-	GetUserByID(ex Executor, userID string) (*po.BasicUser, error)
-	GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error)
-	RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.BasicUser, error)
+	GetUserByID(ex Exct, userID string) (*po.BasicUser, error)
+	GetUserByQQ(ex Exct, qq string) (*po.BasicUser, error)
+	RetrieveUsers(ex Exct, opt model.RetrieveUserOpt) ([]po.BasicUser, error)
 
-	GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error)
+	GetSecretUserByQQ(ex Exct, qq string) (*po.SecretUser, error)
 
-	CreateUser(ex Executor, newUser *po.NewUser) error
+	CreateUser(ex Exct, newUser *po.NewUser) error
 
-	UpdateUserByID(ex Executor, updateUser *po.PatchUser) error
+	UpdateUserByID(ex Exct, updateUser *po.PatchUser) error
 }
 
 // Default implementation of UserRepo.
 type userRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewUserRepo(ex Executor) UserRepo {
+func NewUserRepo(ex Exct) UserRepo {
 	return &userRepo{ex: ex}
 }
 
 // Executor returns the Executor associated with the repository.
-func (ur *userRepo) Exec() Executor {
+func (ur *userRepo) Exct() Exct {
 	return ur.ex
 }
 
 // withTrx returns the effective executor: tx if non-nil, otherwise repo's executor.
-func (ur *userRepo) withTrx(tx Executor) Executor {
+func (ur *userRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -50,7 +50,7 @@ func (ur *userRepo) withTrx(tx Executor) Executor {
 
 // Create a new user.
 // The generated ID is returned in newUser.ID.
-func (ur *userRepo) CreateUser(ex Executor, newUser *po.NewUser) error {
+func (ur *userRepo) CreateUser(ex Exct, newUser *po.NewUser) error {
 	ex = ur.withTrx(ex)
 
 	return ex.Create(newUser).Error
@@ -58,7 +58,7 @@ func (ur *userRepo) CreateUser(ex Executor, newUser *po.NewUser) error {
 
 // Get user basic by ID.
 // A nil BasicUser pointer is returned if no user is found.
-func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, error) {
+func (ur *userRepo) GetUserByID(ex Exct, userID string) (*po.BasicUser, error) {
 	ex = ur.withTrx(ex)
 
 	ub := &po.BasicUser{}
@@ -79,7 +79,7 @@ func (ur *userRepo) GetUserByID(ex Executor, userID string) (*po.BasicUser, erro
 
 // Get user basic by QQ.
 // A nil BasicUser pointer is returned if no user is found.
-func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
+func (ur *userRepo) GetUserByQQ(ex Exct, qq string) (*po.BasicUser, error) {
 	ex = ur.withTrx(ex)
 
 	ub := &po.BasicUser{}
@@ -101,7 +101,7 @@ func (ur *userRepo) GetUserByQQ(ex Executor, qq string) (*po.BasicUser, error) {
 	return ub, nil
 }
 
-func (ur *userRepo) GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, error) {
+func (ur *userRepo) GetSecretUserByQQ(ex Exct, qq string) (*po.SecretUser, error) {
 	ex = ur.withTrx(ex)
 
 	var user po.SecretUser
@@ -117,7 +117,7 @@ func (ur *userRepo) GetSecretUserByQQ(ex Executor, qq string) (*po.SecretUser, e
 }
 
 // Update a user's info by ID.
-func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
+func (ur *userRepo) UpdateUserByID(ex Exct, patchUser *po.PatchUser) error {
 	if patchUser.ID == "" {
 		return errors.New("user ID is required for update")
 	}
@@ -196,7 +196,7 @@ func (ur *userRepo) UpdateUserByID(ex Executor, patchUser *po.PatchUser) error {
 
 // RetrieveUsers returns a slice of BasicUser with filtering and pagination.
 // A zero-length slice is returned if no users are found.
-func (ur *userRepo) RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.BasicUser, error) {
+func (ur *userRepo) RetrieveUsers(ex Exct, opt model.RetrieveUserOpt) ([]po.BasicUser, error) {
 	ex = ur.withTrx(ex)
 
 	var users []po.BasicUser
@@ -276,6 +276,7 @@ func (ur *userRepo) RetrieveUsers(ex Executor, opt model.RetrieveUserOpt) ([]po.
 	}
 
 	if err := query.
+		Order("updated_at DESC").
 		Find(&users).
 		Error; err != nil {
 		return nil, fmt.Errorf("Failed to retrieve users: %w", err)

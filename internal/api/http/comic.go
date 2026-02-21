@@ -150,8 +150,14 @@ func ExportComic(appState *state.AppState) iris.Handler {
 			reject(ctx, iris.StatusBadRequest, "缺少 comic_id 路径参数")
 			return
 		}
+		
+		exportFormat := ctx.URLParamDefault("format", "prk")
+		if exportFormat != "prk" && exportFormat != "lp" {
+			reject(ctx, iris.StatusBadRequest, "非法的导出格式")
+			return 
+		}
 
-		res, err := appState.ComicSvc.ExportComic(comicID)
+		res, err := appState.ComicSvc.ExportComic(comicID, exportFormat)
 		if err != svc.NO_ERROR {
 			reject(ctx, err.Code(), err.Msg())
 			return

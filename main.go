@@ -54,7 +54,7 @@ func initLogger() {
 	zap.ReplaceGlobals(lgr)
 }
 
-func initAppState(cfg config.AppCfg, ex repo.Executor) state.AppState {
+func initAppState(cfg config.AppCfg, ex repo.Exct) state.AppState {
 	// Create JWT codec.
 	jwtCodec := jwtcodec.NewJWTCodec(cfg.JWTExpSecs)
 

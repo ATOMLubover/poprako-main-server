@@ -26,7 +26,7 @@ type ComicSvc interface {
 	GetComicBriefsByWorksetID(worksetID string, offset, limit int) (SvcRslt[[]model.ComicBrief], SvcErr)
 	RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.ComicBrief], SvcErr)
 
-	ExportComic(comicID string) (SvcRslt[model.ExportComicReply], SvcErr)
+	ExportComic(comicID string, exportFormat string) (SvcRslt[model.ExportComicReply], SvcErr)
 	ExportBaseURI() string
 
 	ImportComic(opID string, comicID string, fileName string, reader io.Reader) SvcErr
@@ -200,7 +200,13 @@ func (cs *comicSvc) RetrieveComics(opt model.RetrieveComicOpt) (SvcRslt[[]model.
 }
 
 // ExportComic exports a comic to LabelPlus format.
-func (cs *comicSvc) ExportComic(comicID string) (SvcRslt[model.ExportComicReply], SvcErr) {
+func (cs *comicSvc) ExportComic(comicID string, exportFormat string) (SvcRslt[model.ExportComicReply], SvcErr) {
+	// Validate export format
+	if exportFormat != "prk" && exportFormat != "lp" {
+		zap.L().Warn("Invalid export format", zap.String("comicID", comicID), zap.String("format", exportFormat))
+		return SvcRslt[model.ExportComicReply]{}, INVALID_EXPORT_FORMAT
+	}
+
 	// Ensure export directory exists
 	if err := os.MkdirAll(cs.exportDir, 0o755); err != nil {
 		zap.L().Error("Failed to create export directory", zap.String("dir", cs.exportDir), zap.Error(err))
@@ -212,15 +218,33 @@ func (cs *comicSvc) ExportComic(comicID string) (SvcRslt[model.ExportComicReply]
 		zap.L().Warn("Failed to clean old exports", zap.Error(err))
 		// Continue anyway - this is not critical
 	}
+	
+	
 
-	// Export the comic using the comic package
-	filePath, err := comicPkg.ExportLabelplusComic(
-		comicID,
-		cs.exportDir,
-		cs.repo,
-		cs.comicPageRepo,
-		cs.comicUnitRepo,
+	// Export the comic using the selected format
+	var (
+		filePath string
+		err      error
 	)
+
+	switch exportFormat {
+	case "lp":
+		filePath, err = comicPkg.ExportLabelplusComic(
+			comicID,
+			cs.exportDir,
+			cs.repo,
+			cs.comicPageRepo,
+			cs.comicUnitRepo,
+		)
+	case "prk":
+		filePath, err = comicPkg.ExportPoprakoComic(
+			comicID,
+			cs.exportDir,
+			cs.repo,
+			cs.comicPageRepo,
+			cs.comicUnitRepo,
+		)
+	}
 	if err != nil {
 		if err == repo.REC_NOT_FOUND {
 			return SvcRslt[model.ExportComicReply]{}, NOT_FOUND
@@ -271,11 +295,20 @@ func (cs *comicSvc) ImportComic(
 		UserID:        opID,
 	}
 
-	// Check file extension
-	ext := strings.ToLower(filepath.Ext(fileName))
+	lowerFileName := strings.ToLower(fileName)
 
-	switch ext {
-	case ".txt":
+	switch {
+	case strings.HasSuffix(lowerFileName, ".poprako.json"):
+		if err := comicPkg.ImportPoprakoComic(reader, comicID, cs.comicPageRepo, cs.comicUnitRepo, importOpts); err != nil {
+			zap.L().Error("Failed to import Poprako JSON comic",
+				zap.String("comicID", comicID),
+				zap.String("fileName", fileName),
+				zap.Error(err))
+			return INVALID_PROJ_DATA
+		}
+		return NO_ERROR
+
+	case strings.HasSuffix(lowerFileName, ".txt"):
 		// Import LabelPlus format
 		if err := comicPkg.ImportLabelplusComic(reader, comicID, cs.comicPageRepo, cs.comicUnitRepo, importOpts); err != nil {
 			zap.L().Error("Failed to import LabelPlus comic",
@@ -287,6 +320,7 @@ func (cs *comicSvc) ImportComic(
 		return NO_ERROR
 
 	default:
+		ext := strings.ToLower(filepath.Ext(fileName))
 		zap.L().Warn("Unsupported project file extension",
 			zap.String("comicID", comicID),
 			zap.String("fileName", fileName),
@@ -381,7 +415,7 @@ func (cs *comicSvc) CreateComic(opID string, args model.CreateComicArgs) (SvcRsl
 	}
 
 	// Create comic and assignments in a transaction
-	if err := cs.repo.Exec().Transaction(func(tx repo.Executor) error {
+	if err := cs.repo.Exct().Transaction(func(tx repo.Exct) error {
 		// Create the comic
 		newComic := &po.NewComic{
 			ID:          newID,
@@ -514,7 +548,7 @@ func (cs *comicSvc) validatePreAssignments(preAsgns []model.PreAsgnArgs) SvcErr 
 
 // createPreAssignments creates comic assignments for pre-assigned users.
 // For each pre-assignment, it creates a new assignment record and sets the role timestamps.
-func (cs *comicSvc) createPreAssignments(tx repo.Executor, comicID string, preAsgns []model.PreAsgnArgs) error {
+func (cs *comicSvc) createPreAssignments(tx repo.Exct, comicID string, preAsgns []model.PreAsgnArgs) error {
 	now := time.Now()
 
 	for _, preAsgn := range preAsgns {

@@ -4,6 +4,7 @@ type InvitationInfo struct {
 	ID                string `json:"id"`
 	InvitorID         string `json:"invitor_id"`
 	InviteeQQ         string `json:"invitee_qq"`
+	InvCode           string `json:"invitation_code"`
 	AssignTranslator  bool   `json:"assign_translator"`
 	AssignProofreader bool   `json:"assign_proofreader"`
 	AssignTypesetter  bool   `json:"assign_typesetter"`

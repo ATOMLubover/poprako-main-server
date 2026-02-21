@@ -30,11 +30,13 @@ type parsedUnit struct {
 	translatorComment  *string
 	proofreaderComment *string
 }
+
 // ImportOptions defines options for importing a comic.
 type ImportOptions struct {
 	IsProofreader bool
 	UserID        string
 }
+
 var (
 	// Regex patterns for parsing LabelPlus format
 	pageHeaderRegex = regexp.MustCompile(`^>>>>>>>>\[.+\]<<<<<<<<$`)
@@ -59,7 +61,7 @@ func ImportLabelplusComic(
 	}
 
 	// 2. Start transaction
-	tx := pageRepo.Exec().Begin()
+	tx := pageRepo.Exct().Begin()
 	if tx.Error != nil {
 		return fmt.Errorf("failed to start transaction: %w", tx.Error)
 	}

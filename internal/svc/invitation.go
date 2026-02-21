@@ -56,6 +56,7 @@ func (is *invitationSvc) GetInvitationInfos(
 			ID:                inv.ID,
 			InvitorID:         inv.InvitorID,
 			InviteeQQ:         inv.InviteeQQ,
+			InvCode:           inv.InvCode,
 			AssignTranslator:  inv.AssignTranslator,
 			AssignProofreader: inv.AssignProofreader,
 			AssignTypesetter:  inv.AssignTypesetter,
@@ -143,5 +144,5 @@ func (is *invitationSvc) CreateInvitation(
 
 func genInvCode(newID string) string {
 	// To simplify, just use UUID
-	return newID[:8]
+	return newID[len(newID)-6:]
 }

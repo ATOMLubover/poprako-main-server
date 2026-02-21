@@ -74,6 +74,13 @@ type PatchComicUnit struct {
 	CreatorID *string `gorm:"column:creator_id"`
 }
 
+type UnitCounts struct {
+	Inbox      int64
+	Outbox     int64
+	Translated int64
+	Proved     int64
+}
+
 func (*NewComicUnit) TableName() string { return COMIC_UNIT_TABLE }
 
 func (*BasicComicUnit) TableName() string { return COMIC_UNIT_TABLE }

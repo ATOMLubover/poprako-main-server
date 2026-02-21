@@ -11,29 +11,29 @@ import (
 type ComicAsgnRepo interface {
 	Repo
 
-	GetAsgnByID(ex Executor, assignmentID string) (*po.BasicComicAsgn, error)
-	GetAsgnsByComicID(ex Executor, comicID string, offset, limit int) ([]po.BasicComicAsgn, error)
-	GetAsgnsByUserID(ex Executor, userID string, offset, limit int) ([]po.BasicComicAsgn, error)
-	GetAsgnsByUserAndComicID(ex Executor, userID, comicID string) (*po.BasicComicAsgn, error)
+	GetAsgnByID(ex Exct, assignmentID string) (*po.BasicComicAsgn, error)
+	GetAsgnsByComicID(ex Exct, comicID string, offset, limit int) ([]po.BasicComicAsgn, error)
+	GetAsgnsByUserID(ex Exct, userID string, offset, limit int) ([]po.BasicComicAsgn, error)
+	GetAsgnsByUserAndComicID(ex Exct, userID, comicID string) (*po.BasicComicAsgn, error)
 
-	CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error
+	CreateAsgn(ex Exct, newAssign *po.NewComicAsgn) error
 
-	UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error
+	UpdateAsgnByID(ex Exct, patchAssign *po.PatchComicAsgn) error
 
-	DeleteAsgnByID(ex Executor, assignmentID string) error
+	DeleteAsgnByID(ex Exct, assignmentID string) error
 }
 
 type comicAsgnRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewComicAsgnRepo(ex Executor) ComicAsgnRepo {
+func NewComicAsgnRepo(ex Exct) ComicAsgnRepo {
 	return &comicAsgnRepo{ex: ex}
 }
 
-func (car *comicAsgnRepo) Exec() Executor { return car.ex }
+func (car *comicAsgnRepo) Exct() Exct { return car.ex }
 
-func (car *comicAsgnRepo) withTrx(tx Executor) Executor {
+func (car *comicAsgnRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -41,13 +41,13 @@ func (car *comicAsgnRepo) withTrx(tx Executor) Executor {
 	return car.ex
 }
 
-func (car *comicAsgnRepo) CreateAsgn(ex Executor, newAssign *po.NewComicAsgn) error {
+func (car *comicAsgnRepo) CreateAsgn(ex Exct, newAssign *po.NewComicAsgn) error {
 	ex = car.withTrx(ex)
 
 	return ex.Create(newAssign).Error
 }
 
-func (car *comicAsgnRepo) GetAsgnByID(ex Executor, assignmentID string) (*po.BasicComicAsgn, error) {
+func (car *comicAsgnRepo) GetAsgnByID(ex Exct, assignmentID string) (*po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
 	a := &po.BasicComicAsgn{}
@@ -65,7 +65,7 @@ func (car *comicAsgnRepo) GetAsgnByID(ex Executor, assignmentID string) (*po.Bas
 	return a, nil
 }
 
-func (car *comicAsgnRepo) GetAsgnsByComicID(ex Executor, comicID string, offset, limit int) ([]po.BasicComicAsgn, error) {
+func (car *comicAsgnRepo) GetAsgnsByComicID(ex Exct, comicID string, offset, limit int) ([]po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
 	var lst []po.BasicComicAsgn
@@ -93,7 +93,7 @@ func (car *comicAsgnRepo) GetAsgnsByComicID(ex Executor, comicID string, offset,
 	return lst, nil
 }
 
-func (car *comicAsgnRepo) GetAsgnsByUserID(ex Executor, userID string, offset, limit int) ([]po.BasicComicAsgn, error) {
+func (car *comicAsgnRepo) GetAsgnsByUserID(ex Exct, userID string, offset, limit int) ([]po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
 	var lst []po.BasicComicAsgn
@@ -121,7 +121,7 @@ func (car *comicAsgnRepo) GetAsgnsByUserID(ex Executor, userID string, offset, l
 	return lst, nil
 }
 
-func (car *comicAsgnRepo) GetAsgnsByUserAndComicID(ex Executor, userID, comicID string) (*po.BasicComicAsgn, error) {
+func (car *comicAsgnRepo) GetAsgnsByUserAndComicID(ex Exct, userID, comicID string) (*po.BasicComicAsgn, error) {
 	ex = car.withTrx(ex)
 
 	a := &po.BasicComicAsgn{}
@@ -139,7 +139,7 @@ func (car *comicAsgnRepo) GetAsgnsByUserAndComicID(ex Executor, userID, comicID 
 	return a, nil
 }
 
-func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComicAsgn) error {
+func (car *comicAsgnRepo) UpdateAsgnByID(ex Exct, patchAssign *po.PatchComicAsgn) error {
 	if patchAssign.ID == "" {
 		return errors.New("assignment ID is required for update")
 	}
@@ -205,7 +205,7 @@ func (car *comicAsgnRepo) UpdateAsgnByID(ex Executor, patchAssign *po.PatchComic
 		Error
 }
 
-func (car *comicAsgnRepo) DeleteAsgnByID(ex Executor, assignmentID string) error {
+func (car *comicAsgnRepo) DeleteAsgnByID(ex Exct, assignmentID string) error {
 	ex = car.withTrx(ex)
 
 	result := ex.Where("id = ?", assignmentID).Delete(&po.BasicComicAsgn{})

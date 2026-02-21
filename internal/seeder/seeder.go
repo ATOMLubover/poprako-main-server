@@ -27,7 +27,7 @@ type ComicProgress struct {
 	ReviewingDone   bool
 }
 
-func Seed(ex repo.Executor) {
+func Seed(ex repo.Exct) {
 	var count int64
 	if err := ex.Model(&po.BriefComic{}).Count(&count).Error; err != nil {
 		zap.L().Error("Failed to count comics", zap.Error(err))
@@ -280,7 +280,7 @@ func Seed(ex repo.Executor) {
 	zap.L().Info("Database seeding completed", zap.Int("comics", totalComics))
 }
 
-func createUsers(ex repo.Executor, userRepo repo.UserRepo, count int, rolePrefix string,
+func createUsers(ex repo.Exct, userRepo repo.UserRepo, count int, rolePrefix string,
 	translator, proofreader, typesetter, redrawer, reviewer, uploader bool,
 ) []string {
 	now := time.Now()
@@ -325,7 +325,7 @@ func createUsers(ex repo.Executor, userRepo repo.UserRepo, count int, rolePrefix
 	return users
 }
 
-func updateComicProgress(ex repo.Executor, comicRepo repo.ComicRepo, prog ComicProgress,
+func updateComicProgress(ex repo.Exct, comicRepo repo.ComicRepo, prog ComicProgress,
 	totalUnits, translatedUnits int,
 ) {
 	if !prog.HasTranslator {

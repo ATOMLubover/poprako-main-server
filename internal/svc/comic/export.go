@@ -1,6 +1,7 @@
 package comic
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,132 @@ import (
 	"poprako-main-server/internal/model/po"
 	"poprako-main-server/internal/repo"
 )
+
+type poprakoProject struct {
+	Author string        `json:"author"`
+	Title  string        `json:"title"`
+	Pages  []poprakoPage `json:"pages"`
+}
+
+type poprakoPage struct {
+	ImageFilename string        `json:"image_filename"`
+	Units         []poprakoUnit `json:"units"`
+}
+
+type poprakoUnit struct {
+	ID             string  `json:"id"`
+	X              float64 `json:"x"`
+	Y              float64 `json:"y"`
+	IndexInPage    uint32  `json:"index_in_page"`
+	IsInbox        bool    `json:"is_inbox"`
+	TranslatedText *string `json:"translated_text,omitempty"`
+	ProovedText    *string `json:"prooved_text,omitempty"`
+	IsProoved      bool    `json:"is_prooved"`
+	Comment        *string `json:"comment,omitempty"`
+	IsLocal        bool    `json:"is_local"`
+}
+
+// ExportPoprakoComic exports a comic to PopRaKo JSON format file.
+// Returns the absolute file path on success.
+func ExportPoprakoComic(
+	comicID string,
+	exportDir string,
+	comicRepo repo.ComicRepo,
+	comicPageRepo repo.ComicPageRepo,
+	comicUnitRepo repo.ComicUnitRepo,
+) (string, error) {
+	comic, err := comicRepo.GetComicByID(nil, comicID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get comic: %w", err)
+	}
+
+	pages, err := comicPageRepo.GetPagesByComicID(nil, comicID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get pages: %w", err)
+	}
+
+	sort.Slice(pages, func(i, j int) bool {
+		return pages[i].Index < pages[j].Index
+	})
+
+	now := time.Now()
+	safeAuthor := truncateRunes(sanitizeFilename(comic.Author), 20)
+	safeTitle := truncateRunes(sanitizeFilename(comic.Title), 60)
+
+	fileName := fmt.Sprintf("【%s】%s-%s.poprako.json", safeAuthor, safeTitle, now.Format("20060102150405"))
+
+	const maxComponentBytes = 255
+	for len([]byte(fileName)) > maxComponentBytes {
+		if len([]rune(safeTitle)) > 1 {
+			safeTitle = shortenByOneRune(safeTitle)
+		} else if len([]rune(safeAuthor)) > 1 {
+			safeAuthor = shortenByOneRune(safeAuthor)
+		} else {
+			break
+		}
+
+		fileName = fmt.Sprintf("【%s】%s-%s.poprako.json", safeAuthor, safeTitle, now.Format("20060102150405"))
+	}
+
+	filePath := filepath.Join(exportDir, fileName)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	project := poprakoProject{
+		Author: comic.Author,
+		Title:  comic.Title,
+		Pages:  make([]poprakoPage, 0, len(pages)),
+	}
+
+	for _, page := range pages {
+		units, err := comicUnitRepo.GetUnitsByPageID(nil, page.ID)
+		if err != nil {
+			return "", fmt.Errorf("failed to get units for page %s: %w", page.ID, err)
+		}
+
+		sort.Slice(units, func(i, j int) bool {
+			return units[i].Index < units[j].Index
+		})
+
+		pageDTO := poprakoPage{
+			ImageFilename: imageFilenameFromPage(page),
+			Units:         make([]poprakoUnit, 0, len(units)),
+		}
+
+		for _, unit := range units {
+			index := uint32(0)
+			if unit.Index > 0 {
+				index = uint32(unit.Index)
+			}
+
+			pageDTO.Units = append(pageDTO.Units, poprakoUnit{
+				ID:             unit.ID,
+				X:              unit.XCoordinate,
+				Y:              unit.YCoordinate,
+				IndexInPage:    index,
+				IsInbox:        unit.IsInBox,
+				TranslatedText: normalizeOptionalText(unit.TranslatedText),
+				ProovedText:    normalizeOptionalText(unit.ProvedText),
+				IsProoved:      unit.Proved,
+				Comment:        normalizeOptionalText(stringPtr(formatComment(unit.TranslatorComment, unit.ProofreaderComment))),
+				IsLocal:        false,
+			})
+		}
+
+		project.Pages = append(project.Pages, pageDTO)
+	}
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(project); err != nil {
+		return "", fmt.Errorf("failed to encode poprako json: %w", err)
+	}
+
+	return filePath, nil
+}
 
 // ExportLabelplusComic exports a comic to LabelPlus format file.
 // Returns the absolute file path on success.
@@ -184,6 +311,41 @@ func formatComment(translatorComment, proofreaderComment *string) string {
 	}
 
 	return strings.Join(parts, "\n")
+}
+
+func imageFilenameFromPage(page po.BasicComicPage) string {
+	fileName := filepath.Base(page.OSSKey)
+	if fileName == "" || fileName == "." {
+		imgExt := filepath.Ext(page.OSSKey)
+		if imgExt == "" {
+			imgExt = ".jpg"
+		}
+		return fmt.Sprintf("page_%d%s", page.Index, imgExt)
+	}
+
+	return fileName
+}
+
+func normalizeOptionalText(s *string) *string {
+	if s == nil {
+		return nil
+	}
+
+	trimmed := strings.TrimSpace(*s)
+	if trimmed == "" {
+		return nil
+	}
+
+	value := *s
+	return &value
+}
+
+func stringPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+
+	return &s
 }
 
 // sanitizeFilename removes invalid characters for filenames.

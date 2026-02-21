@@ -17,3 +17,7 @@ public/
 # Executable files.
 *.exe
 poprako-main-server*
+output/
+
+# justfile
+justfile

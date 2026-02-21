@@ -12,28 +12,28 @@ import (
 type ComicPageRepo interface {
 	Repo
 
-	GetPageByID(ex Executor, pageID string) (*po.BasicComicPage, error)
-	GetCoverByComicID(ex Executor, comicID string) (*po.BasicComicPage, error)
-	GetPagesByComicID(ex Executor, comicID string) ([]po.BasicComicPage, error)
+	GetPageByID(ex Exct, pageID string) (*po.BasicComicPage, error)
+	GetCoverByComicID(ex Exct, comicID string) (*po.BasicComicPage, error)
+	GetPagesByComicID(ex Exct, comicID string) ([]po.BasicComicPage, error)
 
 	CreatePages(newPages []po.NewComicPage) error
 
-	UpdatePageByID(ex Executor, patchPage *po.PatchComicPage) error
+	UpdatePageByID(ex Exct, patchPage *po.PatchComicPage) error
 
-	DeletePageByID(ex Executor, pageID string) error
+	DeletePageByID(ex Exct, pageID string) error
 }
 
 type comicPageRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewComicPageRepo(ex Executor) ComicPageRepo {
+func NewComicPageRepo(ex Exct) ComicPageRepo {
 	return &comicPageRepo{ex: ex}
 }
 
-func (cpr *comicPageRepo) Exec() Executor { return cpr.ex }
+func (cpr *comicPageRepo) Exct() Exct { return cpr.ex }
 
-func (cpr *comicPageRepo) withTrx(tx Executor) Executor {
+func (cpr *comicPageRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -42,7 +42,7 @@ func (cpr *comicPageRepo) withTrx(tx Executor) Executor {
 }
 
 func (cpr *comicPageRepo) CreatePages(newPages []po.NewComicPage) error {
-	if err := cpr.Exec().Transaction(func(ex Executor) error {
+	if err := cpr.Exct().Transaction(func(ex Exct) error {
 		cnt := len(newPages)
 		if cnt == 0 {
 			return nil
@@ -69,7 +69,7 @@ func (cpr *comicPageRepo) CreatePages(newPages []po.NewComicPage) error {
 	return nil
 }
 
-func (cpr *comicPageRepo) GetPageByID(ex Executor, pageID string) (*po.BasicComicPage, error) {
+func (cpr *comicPageRepo) GetPageByID(ex Exct, pageID string) (*po.BasicComicPage, error) {
 	ex = cpr.withTrx(ex)
 
 	p := &po.BasicComicPage{}
@@ -84,7 +84,7 @@ func (cpr *comicPageRepo) GetPageByID(ex Executor, pageID string) (*po.BasicComi
 	return p, nil
 }
 
-func (cpr *comicPageRepo) GetPagesByComicID(ex Executor, comicID string) ([]po.BasicComicPage, error) {
+func (cpr *comicPageRepo) GetPagesByComicID(ex Exct, comicID string) ([]po.BasicComicPage, error) {
 	ex = cpr.withTrx(ex)
 
 	var lst []po.BasicComicPage
@@ -99,7 +99,7 @@ func (cpr *comicPageRepo) GetPagesByComicID(ex Executor, comicID string) ([]po.B
 	return lst, nil
 }
 
-func (cpr *comicPageRepo) GetCoverByComicID(ex Executor, comicID string) (*po.BasicComicPage, error) {
+func (cpr *comicPageRepo) GetCoverByComicID(ex Exct, comicID string) (*po.BasicComicPage, error) {
 	ex = cpr.withTrx(ex)
 
 	p := &po.BasicComicPage{}
@@ -115,7 +115,7 @@ func (cpr *comicPageRepo) GetCoverByComicID(ex Executor, comicID string) (*po.Ba
 	return p, nil
 }
 
-func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPage) error {
+func (cpr *comicPageRepo) UpdatePageByID(ex Exct, patchPage *po.PatchComicPage) error {
 	if patchPage.ID == "" {
 		return errors.New("page ID is required for update")
 	}
@@ -147,10 +147,10 @@ func (cpr *comicPageRepo) UpdatePageByID(ex Executor, patchPage *po.PatchComicPa
 		Error
 }
 
-func (cpr *comicPageRepo) DeletePageByID(ex Executor, pageID string) error {
+func (cpr *comicPageRepo) DeletePageByID(ex Exct, pageID string) error {
 	ex = cpr.withTrx(ex)
 
-	return ex.Transaction(func(tx Executor) error {
+	return ex.Transaction(func(tx Exct) error {
 		// Get page first to get comic_id
 		page := &po.BasicComicPage{}
 		if err := tx.Where("id = ?", pageID).First(page).Error; err != nil {

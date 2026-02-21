@@ -11,27 +11,27 @@ import (
 type WorksetRepo interface {
 	Repo
 
-	GetWorksetByID(ex Executor, worksetID string) (*po.DetailedWorkset, error)
-	RetrieveWorksets(ex Executor, limit, offset int) ([]po.DetailedWorkset, error)
+	GetWorksetByID(ex Exct, worksetID string) (*po.DetailedWorkset, error)
+	RetrieveWorksets(ex Exct, limit, offset int) ([]po.DetailedWorkset, error)
 
-	CreateWorkset(ex Executor, newWorkset *po.NewWorkset) error
+	CreateWorkset(ex Exct, newWorkset *po.NewWorkset) error
 
-	UpdateWorksetByID(ex Executor, patchWorkset *po.PatchWorkset) error
+	UpdateWorksetByID(ex Exct, patchWorkset *po.PatchWorkset) error
 
-	DeleteWorksetByID(ex Executor, worksetID string) error
+	DeleteWorksetByID(ex Exct, worksetID string) error
 }
 
 type worksetRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewWorksetRepo(ex Executor) WorksetRepo {
+func NewWorksetRepo(ex Exct) WorksetRepo {
 	return &worksetRepo{ex: ex}
 }
 
-func (wr *worksetRepo) Exec() Executor { return wr.ex }
+func (wr *worksetRepo) Exct() Exct { return wr.ex }
 
-func (wr *worksetRepo) withTrx(tx Executor) Executor {
+func (wr *worksetRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -39,12 +39,12 @@ func (wr *worksetRepo) withTrx(tx Executor) Executor {
 	return wr.ex
 }
 
-func (wr *worksetRepo) CreateWorkset(ex Executor, newWorkset *po.NewWorkset) error {
+func (wr *worksetRepo) CreateWorkset(ex Exct, newWorkset *po.NewWorkset) error {
 	// Count total workset count.
 	// A optimistic lock based on unqiue index is expected.
 	var cnt int64
 
-	if err := wr.Exec().Model(&po.DetailedWorkset{}).
+	if err := wr.Exct().Model(&po.DetailedWorkset{}).
 		Count(&cnt).
 		Error; err != nil {
 		return fmt.Errorf("Failed to count worksets: %w", err)
@@ -57,7 +57,7 @@ func (wr *worksetRepo) CreateWorkset(ex Executor, newWorkset *po.NewWorkset) err
 	return ex.Create(newWorkset).Error
 }
 
-func (wr *worksetRepo) GetWorksetByID(ex Executor, worksetID string) (*po.DetailedWorkset, error) {
+func (wr *worksetRepo) GetWorksetByID(ex Exct, worksetID string) (*po.DetailedWorkset, error) {
 	ex = wr.withTrx(ex)
 
 	w := &po.DetailedWorkset{}
@@ -75,7 +75,7 @@ func (wr *worksetRepo) GetWorksetByID(ex Executor, worksetID string) (*po.Detail
 	return w, nil
 }
 
-func (wr *worksetRepo) UpdateWorksetByID(ex Executor, patchWorkset *po.PatchWorkset) error {
+func (wr *worksetRepo) UpdateWorksetByID(ex Exct, patchWorkset *po.PatchWorkset) error {
 	if patchWorkset.ID == "" {
 		return errors.New("workset ID is required for update")
 	}
@@ -112,7 +112,7 @@ func (wr *worksetRepo) UpdateWorksetByID(ex Executor, patchWorkset *po.PatchWork
 
 // RetrieveWorksets returns a list of DetailedWorkset with pagination (limit, offset).
 // A zero-length slice is returned if no worksets are found.
-func (wr *worksetRepo) RetrieveWorksets(ex Executor, limit, offset int) ([]po.DetailedWorkset, error) {
+func (wr *worksetRepo) RetrieveWorksets(ex Exct, limit, offset int) ([]po.DetailedWorkset, error) {
 	ex = wr.withTrx(ex)
 
 	var lst []po.DetailedWorkset
@@ -139,7 +139,7 @@ func (wr *worksetRepo) RetrieveWorksets(ex Executor, limit, offset int) ([]po.De
 	return lst, nil
 }
 
-func (wr *worksetRepo) DeleteWorksetByID(ex Executor, worksetID string) error {
+func (wr *worksetRepo) DeleteWorksetByID(ex Exct, worksetID string) error {
 	ex = wr.withTrx(ex)
 
 	result := ex.Where("id = ?", worksetID).Delete(&po.DetailedWorkset{})

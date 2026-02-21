@@ -14,28 +14,28 @@ import (
 type ComicRepo interface {
 	Repo
 
-	GetComicByID(ex Executor, comicID string) (*po.BasicComic, error)
-	GetComicsByWorksetID(ex Executor, worksetID string, offset, limit int) ([]po.BriefComic, error)
-	RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]po.BriefComic, error)
+	GetComicByID(ex Exct, comicID string) (*po.BasicComic, error)
+	GetComicsByWorksetID(ex Exct, worksetID string, offset, limit int) ([]po.BriefComic, error)
+	RetrieveComics(ex Exct, opt model.RetrieveComicOpt) ([]po.BriefComic, error)
 
 	CreateComic(newComic *po.NewComic) error
 
-	UpdateComicByID(ex Executor, patchComic *po.PatchComic) error
+	UpdateComicByID(ex Exct, patchComic *po.PatchComic) error
 
-	DeleteComicByID(ex Executor, comicID string) error
+	DeleteComicByID(ex Exct, comicID string) error
 }
 
 type comicRepo struct {
-	ex Executor
+	ex Exct
 }
 
-func NewComicRepo(ex Executor) ComicRepo {
+func NewComicRepo(ex Exct) ComicRepo {
 	return &comicRepo{ex: ex}
 }
 
-func (cr *comicRepo) Exec() Executor { return cr.ex }
+func (cr *comicRepo) Exct() Exct { return cr.ex }
 
-func (cr *comicRepo) withTrx(tx Executor) Executor {
+func (cr *comicRepo) withTrx(tx Exct) Exct {
 	if tx != nil {
 		return tx
 	}
@@ -44,7 +44,7 @@ func (cr *comicRepo) withTrx(tx Executor) Executor {
 }
 
 func (cr *comicRepo) CreateComic(newComic *po.NewComic) error {
-	if err := cr.Exec().Transaction(func(ex Executor) error {
+	if err := cr.Exct().Transaction(func(ex Exct) error {
 		// Query workset index
 		var workset po.DetailedWorkset
 		if err := ex.Model(&po.DetailedWorkset{}).
@@ -90,7 +90,7 @@ func (cr *comicRepo) CreateComic(newComic *po.NewComic) error {
 	return nil
 }
 
-func (cr *comicRepo) GetComicByID(ex Executor, comicID string) (*po.BasicComic, error) {
+func (cr *comicRepo) GetComicByID(ex Exct, comicID string) (*po.BasicComic, error) {
 	ex = cr.withTrx(ex)
 
 	c := &po.BasicComic{}
@@ -109,7 +109,7 @@ func (cr *comicRepo) GetComicByID(ex Executor, comicID string) (*po.BasicComic, 
 	return c, nil
 }
 
-func (cr *comicRepo) GetComicsByWorksetID(ex Executor, worksetID string, offset, limit int) ([]po.BriefComic, error) {
+func (cr *comicRepo) GetComicsByWorksetID(ex Exct, worksetID string, offset, limit int) ([]po.BriefComic, error) {
 	ex = cr.withTrx(ex)
 
 	var lst []po.BriefComic
@@ -134,7 +134,7 @@ func (cr *comicRepo) GetComicsByWorksetID(ex Executor, worksetID string, offset,
 	return lst, nil
 }
 
-func (cr *comicRepo) GetComicsByIDs(ex Executor, comicIDs []string) ([]po.BasicComic, error) {
+func (cr *comicRepo) GetComicsByIDs(ex Exct, comicIDs []string) ([]po.BasicComic, error) {
 	ex = cr.withTrx(ex)
 
 	var lst []po.BasicComic
@@ -149,7 +149,7 @@ func (cr *comicRepo) GetComicsByIDs(ex Executor, comicIDs []string) ([]po.BasicC
 	return lst, nil
 }
 
-func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) error {
+func (cr *comicRepo) UpdateComicByID(ex Exct, patchComic *po.PatchComic) error {
 	if patchComic.ID == "" {
 		return errors.New("comic ID is required for update")
 	}
@@ -244,7 +244,7 @@ func (cr *comicRepo) UpdateComicByID(ex Executor, patchComic *po.PatchComic) err
 
 // RetrieveComics returns a slice of BriefComic with filtering and pagination.
 // A zero-length slice is returned if no comics are found.
-func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]po.BriefComic, error) {
+func (cr *comicRepo) RetrieveComics(ex Exct, opt model.RetrieveComicOpt) ([]po.BriefComic, error) {
 	ex = cr.withTrx(ex)
 
 	var lst []po.BriefComic
@@ -337,8 +337,8 @@ func (cr *comicRepo) RetrieveComics(ex Executor, opt model.RetrieveComicOpt) ([]
 	return lst, nil
 }
 
-func (cr *comicRepo) DeleteComicByID(ex Executor, comicID string) error {
-	return cr.Exec().Transaction(func(tx Executor) error {
+func (cr *comicRepo) DeleteComicByID(ex Exct, comicID string) error {
+	return cr.Exct().Transaction(func(tx Exct) error {
 		// Get comic first to get workset_id
 		comic := &po.BasicComic{}
 		if err := tx.Where("id = ?", comicID).First(comic).Error; err != nil {

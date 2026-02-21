@@ -8,9 +8,9 @@ import (
 	"gorm.io/gorm"
 )
 
-type Executor = *gorm.DB
+type Exct = *gorm.DB
 
-func InitDB() Executor {
+func InitDB() Exct {
 	dbURL := os.Getenv("DATABASE_URL")
 
 	if dbURL == "" {
@@ -35,14 +35,8 @@ func InitDB() Executor {
 }
 
 type Repo interface {
-	Exec() Executor
-	withTrx(tx Executor) Executor
+	Exct() Exct
+	withTrx(tx Exct) Exct
 }
 
 // UnitCounts holds aggregate counts for different unit states on a page.
-type UnitCounts struct {
-	Inbox      int64
-	Outbox     int64
-	Translated int64
-	Proved     int64
-}

@@ -68,6 +68,8 @@ const (
 	INVALID_PROJ_EXT SvcErr = "Invalid project file extension"
 	// Invalid project data.
 	INVALID_PROJ_DATA SvcErr = "Invalid project data"
+	// Invalid export format.
+	INVALID_EXPORT_FORMAT SvcErr = "Invalid export format"
 )
 
 // Get a API error code for the ServError.
@@ -110,6 +112,8 @@ func (e *SvcErr) Code() uint16 {
 	case INVALID_PROJ_EXT:
 		return 400
 	case INVALID_PROJ_DATA:
+		return 400
+		case INVALID_EXPORT_FORMAT:
 		return 400
 	default:
 		return 500
@@ -159,6 +163,8 @@ func (e *SvcErr) Msg() string {
 		return "不支持的项目文件格式"
 	case INVALID_PROJ_DATA:
 		return "项目数据格式错误"
+		case INVALID_EXPORT_FORMAT:
+		return "不支持的导出格式"
 	default:
 		return "服务器内部错误"
 	}
